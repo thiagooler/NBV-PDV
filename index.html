@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Studio NBV - PDV 16.0 (Elite)</title>
+    <title>Studio NBV - PDV 17.0 (Stable)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         :root { 
@@ -94,7 +94,7 @@
 
         <div id="pdv" class="pdv-container">
             <div class="product-area">
-                <input type="text" id="search" class="search-bar" placeholder="[F2] Buscar ou Bipar Código (ex: 1015-10)..." onkeyup="renderGrid()">
+                <input type="text" id="search" class="search-bar" placeholder="[F2] Buscar ou Bipar Código..." onkeyup="renderGrid()">
                 <div id="grid" class="grid"></div>
             </div>
             <div class="cart-area">
@@ -450,23 +450,33 @@
         }
 
         function printReceipt(sale) {
-            document.getElementById('rec-header').innerText = sale.header; document.getElementById('rec-footer').innerText = sale.footer;
-            // ATUALIZAÇÃO V16: ESPAÇAMENTO E WHATSAPP
-            document.getElementById('rec-meta').innerHTML = `
+            document.getElementById('rec-header').innerText = sale.header;
+            document.getElementById('rec-footer').innerText = sale.footer;
+            
+            // FIX V17: REMOVIDA REFERÊNCIA AO ID PERDIDO E ADD SUPORTE A DADOS OPCIONAIS
+            const metaDiv = document.getElementById('rec-meta');
+            metaDiv.innerHTML = `
                 <div style="margin-bottom: 8px;">Data: ${sale.date}</div>
                 <div style="margin-bottom: 5px; font-weight: bold; font-size: 1.1em;">${sale.client}</div>
                 ${sale.phone ? `<div style="margin-bottom: 5px;">📱 ${sale.phone}</div>` : ''}
                 ${sale.addr ? `<div style="margin-bottom: 5px;">📍 ${sale.addr}</div>` : ''}
             `;
-            // Limpa o antigo endereço para não duplicar
-            document.getElementById('rec-addr').innerHTML = '';
 
             document.getElementById('rec-items').innerHTML = sale.items.map(i => `<tr><td>${i.qty}x ${i.name}</td><td align="right">R$ ${(i.qty*i.price).toFixed(2)}</td></tr>`).join('');
-            document.getElementById('rec-sub').innerText = sale.subtotal.toFixed(2); document.getElementById('rec-disc').innerText = sale.discount.toFixed(2); document.getElementById('rec-total-val').innerText = sale.total.toFixed(2);
+            document.getElementById('rec-sub').innerText = sale.subtotal.toFixed(2);
+            document.getElementById('rec-disc').innerText = sale.discount.toFixed(2);
+            document.getElementById('rec-total-val').innerText = sale.total.toFixed(2);
             document.getElementById('rec-payments').innerHTML = sale.payments.map(p => `<div>${p.method}: R$ ${p.val.toFixed(2)}</div>`).join('');
-            const recChange = document.getElementById('rec-change'); if(sale.change > 0) { recChange.style.display = 'block'; recChange.innerText = `TROCO: R$ ${sale.change.toFixed(2)}`; } else { recChange.style.display = 'none'; }
-            const recPix = document.getElementById('rec-pix-area'); if(sale.pixPrint) { recPix.style.display = 'block'; document.getElementById('rec-pix-key').innerText = sale.pixPrint.key; document.getElementById('rec-pix-amount').innerText = `Valor a Pagar: R$ ${sale.pixPrint.val.toFixed(2)}`; } else { recPix.style.display = 'none'; }
-            const qrC = document.getElementById('qrcode'); qrC.innerHTML = ''; if(sale.link) { document.getElementById('qr-area').style.display = 'block'; new QRCode(qrC, { text: sale.link, width: 80, height: 80 }); } else document.getElementById('qr-area').style.display = 'none';
+            
+            const recChange = document.getElementById('rec-change');
+            if(sale.change > 0) { recChange.style.display = 'block'; recChange.innerText = `TROCO: R$ ${sale.change.toFixed(2)}`; } else { recChange.style.display = 'none'; }
+            
+            const recPix = document.getElementById('rec-pix-area');
+            if(sale.pixPrint) { recPix.style.display = 'block'; document.getElementById('rec-pix-key').innerText = sale.pixPrint.key; document.getElementById('rec-pix-amount').innerText = `Valor a Pagar: R$ ${sale.pixPrint.val.toFixed(2)}`; } else { recPix.style.display = 'none'; }
+            
+            const qrC = document.getElementById('qrcode'); qrC.innerHTML = '';
+            if(sale.link) { document.getElementById('qr-area').style.display = 'block'; new QRCode(qrC, { text: sale.link, width: 80, height: 80 }); } else document.getElementById('qr-area').style.display = 'none';
+            
             setTimeout(() => window.print(), 500);
         }
 
