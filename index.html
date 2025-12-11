@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Caixa Studio NBV (GitHub Sync)</title>
+    <style>
+        :root { --primary: #2c3e50; --accent: #e67e22; --success: #27ae60; --danger: #c0392b; }
+        body { font-family: 'Segoe UI', sans-serif; margin: 0; background: #f4f4f4; display: flex; height: 100vh; overflow: hidden; }
+        
+        /* Sidebar */
+        #sidebar { width: 80px; background: var(--primary); display: flex; flex-direction: column; align-items: center; padding-top: 20px; color: white; }
+        .nav-btn { background: none; border: none; color: white; font-size: 24px; margin-bottom: 20px; cursor: pointer; transition: 0.3s; opacity: 0.7; }
+        .nav-btn:hover, .nav-btn.active { opacity: 1; transform: scale(1.1); }
+        .nav-bottom { margin-top: auto; margin-bottom: 20px; }
+
+        /* Main */
+        #main-content { flex: 1; display: flex; overflow: hidden; position: relative; }
+        
+        /* Status Bar */
+        #status-bar { position: absolute; top: 0; left: 0; width: 100%; height: 5px; background: transparent; z-index: 2000; }
+        .loading-line { height: 100%; background: var(--accent); width: 0%; transition: width 0.3s; }
+
+        /* PDV Layout */
+        .pdv-container { display: flex; width: 100%; height: 100%; }
+        .product-area { flex: 2; padding: 20px; overflow-y: auto; border-right: 1px solid #ddd; }
+        .cart-area { flex: 1; background: white; display: flex; flex-direction: column; box-shadow: -2px 0 5px rgba(0,0,0,0.05); }
+
+        /* Search & Grid */
+        .search-bar { width: 100%; padding: 15px; font-size: 16px; border: 2px solid #ddd; border-radius: 8px; margin-bottom: 20px; box-sizing: border-box; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 15px; }
+        .card { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); cursor: pointer; text-align: center; transition: 0.2s; }
+        .card:hover { transform: translateY(-3px); border: 1px solid var(--accent); }
+        
+        /* Cart */
+        .cart-header { padding: 20px; background: var(--primary); color: white; }
+        .cart-list { flex: 1; overflow-y: auto; padding: 10px; }
+        .cart-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #eee; font-size: 14px; }
+        .cart-footer { padding: 20px; background: #f8f9fa; border-top: 1px solid #ddd; }
+        .btn-checkout { width: 100%; padding: 15px; background: var(--success); color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; }
+
+        /* Forms */
+        .panel { padding: 30px; width: 100%; overflow-y: auto; display: none; }
+        .form-group { margin-bottom: 15px; }
+        .form-group input, .form-group select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; }
+        .btn { padding: 10px 20px; background: var(--primary); color: white; border: none; border-radius: 5px; cursor: pointer; }
+        
+        /* Modal */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000; }
+        .modal-content { background: white; padding: 30px; border-radius: 8px; width: 400px; max-width: 90%; }
+
+        /* Print 58mm */
+        @media print {
+            body * { visibility: hidden; }
+            #receipt, #receipt * { visibility: visible; }
+            #receipt { position: absolute; left: 0; top: 0; width: 58mm; padding: 0; margin: 0; font-family: 'Courier New', monospace; font-size: 12px; display: block !important; }
+            @page { size: 58mm auto; margin: 0; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="sidebar">
+        <button class="nav-btn active" onclick="nav('pdv')" title="Caixa">🛒</button>
+        <button class="nav-btn" onclick="nav('products')" title="Produtos">📦</button>
+        <button class="nav-btn" onclick="nav('clients')" title="Clientes">👥</button>
+        <div class="nav-bottom">
+            <button class="nav-btn" onclick="openConfig()" title="Config GitHub">⚙️</button>
+        </div>
+    </div>
+
+    <div id="main-content">
+        <div id="status-bar"><div class="loading-line" id="loader"></div></div>
+
+        <div id="pdv" class="pdv-container">
+            <div class="product-area">
+                <input type="text" id="search" class="search-bar" placeholder="Buscar produto..." onkeyup="renderGrid()">
+                <div id="grid" class="grid"></div>
+            </div>
+            <div class="cart-area">
+                <div class="cart-header"><h2>Carrinho</h2></div>
+                <div id="cart-list" class="cart-list"></div>
+                <div class="cart-footer">
+                    <h2 style="text-align:right; margin:0 0 10px 0">R$ <span id="total">0.00</span></h2>
+                    <button class="btn-checkout" onclick="openCheckout()">FINALIZAR</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="products" class="panel">
+            <h2>Novo Produto</h2>
+            <div class="form-group"><input id="p-name" placeholder="Nome"></div>
+            <div class="form-group"><input id="p-code" placeholder="Código"></div>
+            <div class="form-group"><input id="p-price" type="number" step="0.01" placeholder="Preço"></div>
+            <button class="btn" onclick="addProduct()">Salvar</button>
+            <hr>
+            <div id="p-list"></div>
+        </div>
+
+        <div id="clients" class="panel">
+            <h2>Novo Cliente</h2>
+            <div class="form-group"><input id="c-name" placeholder="Nome"></div>
+            <div class="form-group"><input id="c-phone" placeholder="WhatsApp"></div>
+            <button class="btn" onclick="addClient()">Salvar</button>
+            <hr>
+            <div id="c-list"></div>
+        </div>
+    </div>
+
+    <div id="config-modal" class="modal">
+        <div class="modal-content">
+            <h3>Conexão GitHub</h3>
+            <p>Insira os dados do repositório para salvar os dados.</p>
+            <div class="form-group"><label>Usuário GitHub:</label><input id="gh-user" placeholder="ex: thiagoteste"></div>
+            <div class="form-group"><label>Nome do Repositório:</label><input id="gh-repo" placeholder="ex: studio-nbv-pos"></div>
+            <div class="form-group"><label>Token de Acesso (PAT):</label><input type="password" id="gh-token" placeholder="ghp_..."></div>
+            <button class="btn" onclick="saveConfig()">Salvar e Conectar</button>
+        </div>
+    </div>
+
+    <div id="checkout-modal" class="modal">
+        <div class="modal-content">
+            <h3>Pagamento</h3>
+            <div class="form-group">
+                <select id="checkout-client"><option value="">Consumidor Final</option></select>
+            </div>
+            <div class="form-group">
+                <select id="pay-method">
+                    <option>Pix</option><option>Dinheiro</option><option>Cartão</option><option>Entrada + Restante</option>
+                </select>
+            </div>
+            <button class="btn-checkout" onclick="finishOrder()">IMPRIMIR CUPOM</button>
+            <button class="btn" style="background:#ccc; margin-top:10px; width:100%" onclick="document.getElementById('checkout-modal').style.display='none'">Cancelar</button>
+        </div>
+    </div>
+
+    <div id="receipt" style="display:none">
+        <center><strong>STUDIO NBV</strong><br>Boa Ventura de S. Roque<br>----------------</center>
+        <div id="rec-body" style="margin:5px 0"></div>
+        <div style="border-top:1px dashed #000; text-align:right">
+            <strong>TOTAL: R$ <span id="rec-total"></span></strong><br>
+            <span id="rec-pay"></span>
+        </div>
+    </div>
+
+    <script>
+        // --- CORE DO SISTEMA ---
+        let db = { products: [], clients: [] };
+        let cart = [];
+        let config = JSON.parse(localStorage.getItem('nbv_gh_config')) || {};
+        let fileSha = ''; // Necessário para update no GitHub
+
+        // --- GITHUB API ---
+        async function ghRequest(method, body = null) {
+            const { user, repo, token } = config;
+            if(!user || !repo || !token) return openConfig();
+
+            document.getElementById('loader').style.width = '50%';
+            
+            const url = `https://api.github.com/repos/${user}/${repo}/contents/db.json`;
+            const headers = {
+                'Authorization': `token ${token}`,
+                'Accept': 'application/vnd.github.v3+json'
+            };
+
+            try {
+                let options = { method, headers };
+                if (body) options.body = JSON.stringify(body);
+                
+                // Adiciona timestamp para evitar cache no GET
+                const fetchUrl = method === 'GET' ? `${url}?t=${Date.now()}` : url;
+                
+                const res = await fetch(fetchUrl, options);
+                document.getElementById('loader').style.width = '100%';
+                setTimeout(() => document.getElementById('loader').style.width = '0%', 500);
+
+                if (!res.ok) throw new Error(`Erro GitHub: ${res.status}`);
+                return await res.json();
+            } catch (e) {
+                alert('Erro de conexão: ' + e.message);
+                document.getElementById('loader').style.width = '0%';
+                return null;
+            }
+        }
+
+        // Encoder para UTF-8 Base64 (para suportar acentos)
+        function toBase64(str) {
+            return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g,
+                function toSolidBytes(match, p1) { return String.fromCharCode('0x' + p1); }));
+        }
+
+        function fromBase64(str) {
+            return decodeURIComponent(atob(str).split('').map(function(c) {
+                return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+            }).join(''));
+        }
+
+        async function loadData() {
+            const data = await ghRequest('GET');
+            if (data) {
+                fileSha = data.sha; // Captura o SHA atual
+                const content = fromBase64(data.content);
+                db = JSON.parse(content);
+                renderAll();
+            }
+        }
+
+        async function saveData() {
+            if (!fileSha) {
+                await loadData(); // Garante que temos o SHA mais recente
+            }
+
+            const content = toBase64(JSON.stringify(db, null, 2));
+            const body = {
+                message: "Update via Caixa Studio NBV",
+                content: content,
+                sha: fileSha
+            };
+
+            const res = await ghRequest('PUT', body);
+            if (res) {
+                fileSha = res.content.sha; // Atualiza SHA para a próxima vez
+                // Feedback visual sutil
+                const activeBtn = document.querySelector('.nav-btn.active');
+                const oldText = activeBtn.innerText;
+                activeBtn.innerText = '💾';
+                setTimeout(() => activeBtn.innerText = oldText, 1000);
+            }
+        }
+
+        // --- INTERFACE ---
+        function nav(id) {
+            document.querySelectorAll('.panel, .pdv-container').forEach(el => el.style.display = 'none');
+            const target = document.getElementById(id);
+            if(target) target.style.display = (id === 'pdv') ? 'flex' : 'block';
+            
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+            // Lógica simples de highlight
+        }
+
+        function openConfig() {
+            document.getElementById('gh-user').value = config.user || '';
+            document.getElementById('gh-repo').value = config.repo || '';
+            document.getElementById('gh-token').value = config.token || '';
+            document.getElementById('config-modal').style.display = 'flex';
+        }
+
+        function saveConfig() {
+            config = {
+                user: document.getElementById('gh-user').value.trim(),
+                repo: document.getElementById('gh-repo').value.trim(),
+                token: document.getElementById('gh-token').value.trim()
+            };
+            localStorage.setItem('nbv_gh_config', JSON.stringify(config));
+            document.getElementById('config-modal').style.display = 'none';
+            loadData();
+        }
+
+        // --- NEGÓCIO ---
+        function addProduct() {
+            const name = document.getElementById('p-name').value;
+            const code = document.getElementById('p-code').value;
+            const price = parseFloat(document.getElementById('p-price').value);
+            
+            if(name && price) {
+                db.products.push({id: Date.now(), name, code, price});
+                saveData();
+                renderAll();
+                document.getElementById('p-name').value = '';
+                document.getElementById('p-price').value = '';
+            }
+        }
+
+        function addClient() {
+            const name = document.getElementById('c-name').value;
+            const phone = document.getElementById('c-phone').value;
+            
+            if(name) {
+                db.clients.push({id: Date.now(), name, phone});
+                saveData();
+                renderAll();
+                document.getElementById('c-name').value = '';
+            }
+        }
+
+        function renderAll() {
+            renderGrid();
+            
+            // Lista Produtos Admin
+            document.getElementById('p-list').innerHTML = db.products.map(p => 
+                `<div>${p.name} (R$ ${p.price}) <span onclick="deleteItem('products', ${p.id})" style="color:red;cursor:pointer">x</span></div>`
+            ).join('');
+            
+            // Lista Clientes
+            const cList = document.getElementById('c-list');
+            const cSelect = document.getElementById('checkout-client');
+            
+            if(cList) cList.innerHTML = db.clients.map(c => `<div>${c.name}</div>`).join('');
+            
+            cSelect.innerHTML = '<option value="">Consumidor Final</option>';
+            db.clients.forEach(c => cSelect.innerHTML += `<option value="${c.name}">${c.name}</option>`);
+        }
+
+        function deleteItem(type, id) {
+            if(confirm('Deletar?')) {
+                db[type] = db[type].filter(i => i.id !== id);
+                saveData();
+                renderAll();
+            }
+        }
+
+        function renderGrid() {
+            const term = document.getElementById('search').value.toLowerCase();
+            const grid = document.getElementById('grid');
+            grid.innerHTML = '';
+            
+            db.products.forEach(p => {
+                if(p.name.toLowerCase().includes(term) || (p.code && p.code.includes(term))) {
+                    const el = document.createElement('div');
+                    el.className = 'card';
+                    el.innerHTML = `<b>${p.name}</b><br><span style="color:green">R$ ${p.price.toFixed(2)}</span>`;
+                    el.onclick = () => addToCart(p);
+                    grid.appendChild(el);
+                }
+            });
+        }
+
+        // --- CARRINHO ---
+        function addToCart(prod) {
+            const exist = cart.find(x => x.id === prod.id);
+            if(exist) exist.qty++;
+            else cart.push({...prod, qty: 1});
+            renderCart();
+        }
+
+        function renderCart() {
+            const list = document.getElementById('cart-list');
+            list.innerHTML = '';
+            let total = 0;
+            
+            cart.forEach((item, idx) => {
+                total += item.qty * item.price;
+                list.innerHTML += `
+                    <div class="cart-item">
+                        <div style="flex:2">${item.name}</div>
+                        <div style="flex:1">
+                            <input type="number" value="${item.qty}" style="width:40px" onchange="cart[${idx}].qty=this.value; renderCart()">
+                        </div>
+                        <div style="flex:1; text-align:right">R$ ${(item.qty * item.price).toFixed(2)} 
+                        <span onclick="cart.splice(${idx},1); renderCart()" style="color:red;cursor:pointer">x</span></div>
+                    </div>
+                `;
+            });
+            document.getElementById('total').innerText = total.toFixed(2);
+        }
+
+        // --- CHECKOUT ---
+        function openCheckout() {
+            if(cart.length === 0) return alert('Carrinho vazio');
+            document.getElementById('checkout-modal').style.display = 'flex';
+        }
+
+        function finishOrder() {
+            const client = document.getElementById('checkout-client').value || 'Consumidor Final';
+            const method = document.getElementById('pay-method').value;
+            const date = new Date().toLocaleString('pt-BR');
+            let total = 0;
+            let itemsHtml = '';
+
+            cart.forEach(i => {
+                total += i.qty * i.price;
+                itemsHtml += `<div>${i.name}<br>${i.qty} x R$${i.price.toFixed(2)} = R$${(i.qty*i.price).toFixed(2)}</div><br>`;
+            });
+
+            // Monta Cupom
+            document.getElementById('rec-body').innerHTML = `
+                Data: ${date}<br>
+                Cliente: ${client}<br>
+                ----------------<br>
+                ${itemsHtml}
+            `;
+            document.getElementById('rec-total').innerText = total.toFixed(2);
+            document.getElementById('rec-pay').innerText = method;
+
+            window.print();
+            
+            document.getElementById('checkout-modal').style.display = 'none';
+            cart = [];
+            renderCart();
+        }
+
+        // Start
+        if(config.token) loadData();
+        else openConfig();
+
+    </script>
+</body>
+</html>
