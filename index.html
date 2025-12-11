@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Studio NBV - PDV 17.0 (Stable)</title>
+    <title>Studio NBV - PDV 18.0 (Final)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         :root { 
@@ -248,7 +248,7 @@
         <div id="rec-header" class="rec-header"></div>
         <div class="rec-line"></div>
         
-        <div id="rec-meta" style="font-size: 1em;"></div>
+        <div id="rec-meta" style="font-size: 1em; line-height: 1.4;"></div>
         
         <div class="rec-line"></div>
         <table style="width:100%" id="rec-items"></table>
@@ -354,7 +354,6 @@
             }
         });
 
-        // --- PRODUTOS ---
         function addProduct() {
             const name = document.getElementById('p-name').value;
             const price = parseFloat(document.getElementById('p-price').value);
@@ -375,7 +374,6 @@
             if(count > 0) { saveData(); renderAll(); alert(count + ' importados!'); document.getElementById('import-modal').style.display = 'none'; }
         }
 
-        // --- ORÇAMENTO ---
         function filterBudgetProducts() {
             const term = document.getElementById('bud-search').value.toLowerCase(); const grid = document.getElementById('bud-grid'); grid.innerHTML = ''; if(term.length === 0) return;
             db.products.forEach(p => { if(p.name.toLowerCase().includes(term) || (p.code && p.code.includes(term))) { const d = document.createElement('div'); d.className = 'card'; d.style.padding = '5px'; d.style.fontSize = '12px'; d.innerHTML = `<b>${p.name}</b><br>R$ ${p.price.toFixed(2)}`; d.onclick = () => addToBudget(p); grid.appendChild(d); } });
@@ -400,7 +398,6 @@
             navigator.clipboard.writeText(text); alert('Copiado!');
         }
 
-        // --- CLIENTES ---
         function addClient(isQuick) {
             const name = document.getElementById(isQuick?'qc-name':'c-name').value;
             if(!name) return alert('Nome é obrigatório');
@@ -413,7 +410,6 @@
         function deleteClient(id) { if(confirm('Excluir?')) { db.clients = db.clients.filter(c=>c.id!==id); saveData(); renderAll(); } }
         function toggleQuickClient() { const f = document.getElementById('quick-client-form'); f.style.display = f.style.display==='block'?'none':'block'; }
 
-        // --- RENDER ---
         function renderAll() {
             const term = document.getElementById('search').value.toLowerCase();
             const grid = document.getElementById('grid'); grid.innerHTML = '';
@@ -445,7 +441,25 @@
             if(payments.length === 0) return alert('Valor inválido');
             const client = db.clients.find(c => c.id == document.getElementById('checkout-client').value);
             const change = Math.max(0, currentPaid - finalTotal);
-            const sale = { id: Date.now(), date: new Date().toLocaleString('pt-BR'), client: client ? client.name : 'Consumidor Final', addr: client ? client.addr : '', phone: client ? client.phone : '', items: cart.map(i => ({...i, price: i.currentPrice})), subtotal: parseFloat(document.getElementById('total').innerText), discount: (parseFloat(document.getElementById('total').innerText) - finalTotal), total: finalTotal, paid: currentPaid, change: change, payments: payments, link: document.getElementById('gallery-link').value, pixPrint: pixPrintData, header: db.settings.headerText, footer: db.settings.footerText };
+            
+            const sale = {
+                id: Date.now(),
+                date: new Date().toLocaleString('pt-BR'),
+                client: client ? client.name : 'Consumidor Final',
+                addr: client ? client.addr : '',
+                phone: client ? client.phone : '',
+                items: cart.map(i => ({...i, price: i.currentPrice})),
+                subtotal: parseFloat(document.getElementById('total').innerText),
+                discount: (parseFloat(document.getElementById('total').innerText) - finalTotal),
+                total: finalTotal,
+                paid: currentPaid,
+                change: change,
+                payments: payments,
+                link: document.getElementById('gallery-link').value,
+                pixPrint: pixPrintData,
+                header: db.settings.headerText,
+                footer: db.settings.footerText
+            };
             db.sales.push(sale); saveData(); printReceipt(sale); cart = []; renderCart(); closeCheckout();
         }
 
@@ -453,13 +467,11 @@
             document.getElementById('rec-header').innerText = sale.header;
             document.getElementById('rec-footer').innerText = sale.footer;
             
-            // FIX V17: REMOVIDA REFERÊNCIA AO ID PERDIDO E ADD SUPORTE A DADOS OPCIONAIS
-            const metaDiv = document.getElementById('rec-meta');
-            metaDiv.innerHTML = `
+            document.getElementById('rec-meta').innerHTML = `
                 <div style="margin-bottom: 8px;">Data: ${sale.date}</div>
                 <div style="margin-bottom: 5px; font-weight: bold; font-size: 1.1em;">${sale.client}</div>
-                ${sale.phone ? `<div style="margin-bottom: 5px;">📱 ${sale.phone}</div>` : ''}
-                ${sale.addr ? `<div style="margin-bottom: 5px;">📍 ${sale.addr}</div>` : ''}
+                ${sale.phone ? `<div style="margin-bottom: 5px;">WhatsApp: ${sale.phone}</div>` : ''}
+                ${sale.addr ? `<div style="margin-bottom: 5px;">End: ${sale.addr}</div>` : ''}
             `;
 
             document.getElementById('rec-items').innerHTML = sale.items.map(i => `<tr><td>${i.qty}x ${i.name}</td><td align="right">R$ ${(i.qty*i.price).toFixed(2)}</td></tr>`).join('');
