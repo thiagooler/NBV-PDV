@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Studio NBV - PDV 11.0 (Gestão Clientes)</title>
+    <title>Studio NBV - PDV 12.0 (Precision)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         :root { 
@@ -53,13 +53,8 @@
         .payment-row input { flex: 1; }
         .pix-check-label { font-size: 10px; display: flex; flex-direction: column; align-items: center; line-height: 1; cursor: pointer; }
 
-        /* Lista de Clientes Customizada */
-        .client-item { 
-            display: flex; justify-content: space-between; align-items: center; 
-            padding: 10px; border-bottom: 1px solid #eee; background: white; 
-        }
-        .client-item:hover { background: #f9f9f9; }
-        .client-actions button { margin-left: 5px; cursor: pointer; border: none; background: none; font-size: 16px; }
+        .client-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #eee; background: white; }
+        .history-item { background: white; padding: 15px; margin-bottom: 10px; border-radius: 5px; border-left: 5px solid var(--accent); box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; }
 
         /* IMPRESSÃO */
         @media print {
@@ -75,9 +70,12 @@
             .rec-line { border-bottom: 2px dashed #000; margin: 5px 0; }
             .rec-header, .rec-footer { text-align: center; white-space: pre-wrap; margin-bottom: 10px; }
             .rec-total { font-size: calc(var(--print-font) + 4px); text-align: right; margin-top: 5px; }
-            #qrcode img { margin: 5px auto; display: block; width: 100%; max-width: 100px; }
+            #qrcode img { margin: 5px auto; display: block; width: 100%; max-width: 80px; /* Forçado 80px */ }
             @page { size: 58mm auto; margin: 0; }
         }
+
+        /* Shortcuts Hint */
+        .shortcuts-hint { position: fixed; bottom: 10px; right: 10px; font-size: 10px; color: #888; background: rgba(255,255,255,0.8); padding: 5px; border-radius: 5px; pointer-events: none; }
     </style>
 </head>
 <body>
@@ -95,7 +93,7 @@
 
         <div id="pdv" class="pdv-container">
             <div class="product-area">
-                <input type="text" id="search" class="search-bar" placeholder="Buscar produto..." onkeyup="renderGrid()">
+                <input type="text" id="search" class="search-bar" placeholder="[F2] Buscar ou Bipar Código..." onkeyup="renderGrid()">
                 <div id="grid" class="grid"></div>
             </div>
             <div class="cart-area">
@@ -103,7 +101,7 @@
                 <div id="cart-list" class="cart-list"></div>
                 <div class="cart-footer">
                     <h2 style="text-align:right; margin:0 0 10px 0">R$ <span id="total">0.00</span></h2>
-                    <button class="btn-checkout" onclick="openCheckout()">FINALIZAR</button>
+                    <button class="btn-checkout" onclick="openCheckout()">[F4] FINALIZAR</button>
                 </div>
             </div>
         </div>
@@ -127,18 +125,15 @@
         <div id="clients" class="panel">
             <h2>Gerenciar Clientes</h2>
             <div style="background: white; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-                <div class="form-group"><label>Nome Completo</label><input id="c-name"></div>
+                <div class="form-group"><label>Nome</label><input id="c-name"></div>
                 <div class="form-group"><label>WhatsApp</label><input id="c-phone"></div>
                 <div class="form-group"><label>Endereço</label><input id="c-addr"></div>
-                
                 <div class="row-inputs">
                     <button id="btn-save-client" class="btn" style="flex:1" onclick="addClient(false)">Salvar Cliente</button>
                     <button id="btn-cancel-client" class="btn" style="background: #95a5a6; display: none;" onclick="cancelClientEdit()">Cancelar</button>
                 </div>
             </div>
-            <hr>
-            <h3>Lista de Clientes</h3>
-            <div id="c-list"></div>
+            <hr><div id="c-list"></div>
         </div>
 
         <div id="history" class="panel">
@@ -197,22 +192,26 @@
             </div>
 
             <div class="form-group">
-                <label>Total Final: R$ <span id="checkout-final" style="font-size:1.2em;color:var(--success)">0.00</span></label>
+                <label>Total a Pagar: R$ <span id="checkout-final" style="font-size:1.2em;color:var(--success)">0.00</span></label>
                 <div id="payment-list"></div>
                 <button class="btn" style="background:#ddd; color:#000; width:100%; margin-top:5px;" onclick="addPaymentRow()">+ Add Pagamento</button>
             </div>
             
+            <div id="change-display" style="text-align:right; font-size:1.2em; color:blue; font-weight:bold; margin-top:10px; display:none;">
+                TROCO: R$ <span id="change-val">0.00</span>
+            </div>
+
             <div id="pix-display" style="display:none; text-align:center; background:#e8f8f5; padding:10px; border:1px solid #27ae60; margin-top:5px;">
                 <strong>QR Code Pix (Tela)</strong>
                 <div id="pix-qrcode-checkout" style="display:flex; justify-content:center; margin:5px;"></div>
                 <button class="btn" style="font-size:10px" onclick="copyPix()">Copiar Código</button>
             </div>
 
-            <div class="form-group"><label>Link Galeria (QR Code Cupom):</label><input id="gallery-link"></div>
+            <div class="form-group" style="margin-top:10px;"><label>Link Galeria (QR Code Cupom):</label><input id="gallery-link"></div>
             
             <div style="margin-top:20px; display:flex; gap:10px;">
-                <button class="btn" style="background:#ccc; flex:1" onclick="closeCheckout()">Cancelar</button>
-                <button class="btn-checkout" style="flex:1" onclick="finishOrder()">IMPRIMIR</button>
+                <button class="btn" style="background:#ccc; flex:1" onclick="closeCheckout()">[ESC] Cancelar</button>
+                <button class="btn-checkout" style="flex:1" onclick="finishOrder()">[F8] IMPRIMIR</button>
             </div>
         </div>
     </div>
@@ -229,10 +228,11 @@
         <div style="display:flex; justify-content:space-between"><span>Desconto:</span><span id="rec-disc"></span></div>
         <div class="rec-total">TOTAL: R$ <span id="rec-total-val"></span></div>
         <div id="rec-payments" style="text-align:right; font-size:10px;"></div>
+        <div id="rec-change" style="text-align:right; font-size:12px; font-weight:bold; margin-top:5px; display:none;"></div>
         
         <div id="rec-pix-area" style="display:none; margin-top:10px; border:2px solid #000; padding:5px; text-align:center;">
             <div style="font-size:14px; font-weight:bold; border-bottom:1px solid #000; margin-bottom:5px;">DADOS PIX</div>
-            <div style="font-size:10px;">Chave para Pagamento:</div>
+            <div style="font-size:10px;">Chave:</div>
             <div style="font-size:16px; font-weight:bold; margin: 5px 0;" id="rec-pix-key"></div>
             <div style="font-size:12px;" id="rec-pix-amount"></div>
         </div>
@@ -242,6 +242,8 @@
         </div>
         <div id="rec-footer" class="rec-footer" style="font-size:10px; margin-top:10px;"></div>
     </div>
+    
+    <div class="shortcuts-hint">F2:Busca | F4:Checkout | F8:Confirmar | ESC:Sair</div>
 
     <script>
         // --- CORE ---
@@ -252,7 +254,7 @@
         let cart = [];
         let auth = JSON.parse(localStorage.getItem('nbv_auth')) || { user: '', repo: '', token: '' };
         let fileSha = '';
-        let editingClientId = null; // Controle de edição
+        let editingClientId = null;
 
         function applySettings() {
             const s = db.settings;
@@ -342,7 +344,31 @@
             saveData(); loadData();
         }
 
-        // --- PRODUTOS ---
+        // --- ATALHOS & EVENTOS ---
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'F2') { e.preventDefault(); nav('pdv'); document.getElementById('search').focus(); }
+            if (e.key === 'F4') { e.preventDefault(); openCheckout(); }
+            if (e.key === 'F8') { e.preventDefault(); if(document.getElementById('checkout-modal').style.display === 'flex') finishOrder(); }
+            if (e.key === 'Escape') { 
+                document.getElementById('checkout-modal').style.display = 'none';
+                document.getElementById('config-modal').style.display = 'none';
+            }
+        });
+
+        // Search Bar Enter -> Add
+        document.getElementById('search').addEventListener('keydown', function(e) {
+            if(e.key === 'Enter') {
+                const term = this.value.toLowerCase();
+                const exact = db.products.find(p => (p.code && p.code.toLowerCase() === term) || p.name.toLowerCase() === term);
+                if(exact) {
+                    addToCart(exact);
+                    this.value = '';
+                    renderGrid(); // Reset grid visual
+                }
+            }
+        });
+
+        // --- PRODUTOS & CLIENTES ---
         function addProduct() {
             const name = document.getElementById('p-name').value;
             const price = parseFloat(document.getElementById('p-price').value);
@@ -357,7 +383,6 @@
             }
         }
 
-        // --- CLIENTES (ADD & EDIT) ---
         function addClient(isQuick) {
             const prefix = isQuick ? 'qc' : 'c';
             const name = document.getElementById(prefix+'-name').value;
@@ -367,33 +392,15 @@
             if(!name) return alert('Nome é obrigatório');
 
             if(editingClientId && !isQuick) {
-                // Modo Edição
                 const client = db.clients.find(c => c.id === editingClientId);
-                if(client) {
-                    client.name = name;
-                    client.phone = phone;
-                    client.addr = addr;
-                }
+                if(client) { client.name = name; client.phone = phone; client.addr = addr; }
                 cancelClientEdit();
             } else {
-                // Modo Novo
                 const newClient = {id: Date.now(), name, phone, addr};
                 db.clients.push(newClient);
-                if(isQuick) {
-                    saveData();
-                    renderClientSelect();
-                    document.getElementById('checkout-client').value = newClient.id;
-                    toggleQuickClient();
-                }
+                if(isQuick) { saveData(); renderClientSelect(); document.getElementById('checkout-client').value = newClient.id; toggleQuickClient(); }
             }
-            
-            if(!isQuick) {
-                saveData(); 
-                renderAll();
-                document.getElementById(prefix+'-name').value = '';
-                document.getElementById(prefix+'-phone').value = '';
-                document.getElementById(prefix+'-addr').value = '';
-            }
+            if(!isQuick) { saveData(); renderAll(); document.getElementById(prefix+'-name').value = ''; }
         }
 
         function startClientEdit(id) {
@@ -402,13 +409,9 @@
             document.getElementById('c-name').value = c.name;
             document.getElementById('c-phone').value = c.phone || '';
             document.getElementById('c-addr').value = c.addr || '';
-            
             editingClientId = id;
             document.getElementById('btn-save-client').innerText = "Atualizar Cliente";
             document.getElementById('btn-cancel-client').style.display = 'block';
-            
-            // Scroll para o topo do form
-            document.getElementById('clients').scrollTop = 0;
         }
 
         function cancelClientEdit() {
@@ -421,17 +424,12 @@
         }
 
         function deleteClient(id) {
-            if(confirm('Tem certeza que deseja apagar este cliente?')) {
-                db.clients = db.clients.filter(c => c.id !== id);
-                saveData();
-                renderAll();
-            }
+            if(confirm('Tem certeza?')) { db.clients = db.clients.filter(c => c.id !== id); saveData(); renderAll(); }
         }
 
         function toggleQuickClient() { const f = document.getElementById('quick-client-form'); f.style.display = f.style.display === 'block' ? 'none' : 'block'; }
         
         function renderAll() {
-            // Produtos Grid
             const term = document.getElementById('search').value.toLowerCase();
             const grid = document.getElementById('grid'); grid.innerHTML = '';
             db.products.forEach(p => {
@@ -446,17 +444,13 @@
             });
             document.getElementById('p-list').innerHTML = db.products.map(p => `<div>${p.name} <button onclick="del('products',${p.id})">x</button></div>`).join('');
             
-            // Clientes Lista
             const clList = document.getElementById('c-list');
             clList.innerHTML = db.clients.map(c => `
                 <div class="client-item">
-                    <div>
-                        <strong>${c.name}</strong><br>
-                        <small>${c.phone || '-'} | ${c.addr || '-'}</small>
-                    </div>
+                    <div><strong>${c.name}</strong><br><small>${c.phone || '-'} | ${c.addr || '-'}</small></div>
                     <div class="client-actions">
-                        <button onclick="startClientEdit(${c.id})" title="Editar">✎</button>
-                        <button onclick="deleteClient(${c.id})" title="Excluir" style="color:red;">🗑️</button>
+                        <button onclick="startClientEdit(${c.id})">✎</button>
+                        <button onclick="deleteClient(${c.id})" style="color:red;">🗑️</button>
                     </div>
                 </div>
             `).join('');
@@ -505,6 +499,7 @@
             document.getElementById('disc-val').value = 0;
             document.getElementById('gallery-link').value = '';
             document.getElementById('pix-display').style.display = 'none';
+            document.getElementById('change-display').style.display = 'none';
             calcTotal(); addPaymentRow(); 
         }
         function closeCheckout() { document.getElementById('checkout-modal').style.display = 'none'; }
@@ -514,6 +509,7 @@
             sel.innerHTML = '<option value="">Consumidor Final</option>';
             db.clients.forEach(c => sel.innerHTML += `<option value="${c.id}">${c.name}</option>`);
         }
+        
         function calcTotal() {
             const sub = parseFloat(document.getElementById('total').innerText);
             const dVal = parseFloat(document.getElementById('disc-val').value) || 0;
@@ -521,28 +517,56 @@
             let discount = (dType === '%') ? sub * (dVal/100) : dVal;
             finalTotal = Math.max(0, sub - discount);
             document.getElementById('checkout-final').innerText = finalTotal.toFixed(2);
+            updateChange(); // Recalc change if total changes
             return finalTotal;
         }
+
+        function updateChange() {
+            let currentPaid = 0;
+            document.querySelectorAll('.pay-amount').forEach(el => currentPaid += parseFloat(el.value)||0);
+            const change = currentPaid - finalTotal;
+            const changeDisplay = document.getElementById('change-display');
+            if(change > 0) {
+                changeDisplay.style.display = 'block';
+                document.getElementById('change-val').innerText = change.toFixed(2);
+            } else {
+                changeDisplay.style.display = 'none';
+            }
+        }
+
         function addPaymentRow() {
+            // Auto-calculate remaining
             let currentPaid = 0;
             document.querySelectorAll('.pay-amount').forEach(el => currentPaid += parseFloat(el.value)||0);
             const remaining = Math.max(0, finalTotal - currentPaid);
+
             const div = document.createElement('div');
             div.className = 'payment-row';
             const opts = db.settings.payMethods.split(',').map(m => `<option>${m.trim()}</option>`).join('');
-            div.innerHTML = `<select class="pay-method" onchange="checkPixRow(this)">${opts}</select><input type="number" class="pay-amount" value="${remaining.toFixed(2)}" step="0.01" onchange="updatePixDisplay()"><label class="pix-check-label" style="display:none"><input type="checkbox" class="pix-print"> 🖨️ Key</label><button onclick="this.parentElement.remove();updatePixDisplay()" style="background:#c0392b;color:white;border:none;">x</button>`;
+            
+            // onchange calls updatePixDisplay AND updateChange
+            div.innerHTML = `
+                <select class="pay-method" onchange="checkPixRow(this)">${opts}</select>
+                <input type="number" class="pay-amount" value="${remaining.toFixed(2)}" step="0.01" onchange="updatePixDisplay(); updateChange();">
+                <label class="pix-check-label" style="display:none"><input type="checkbox" class="pix-print"> 🖨️ Key</label>
+                <button onclick="this.parentElement.remove();updatePixDisplay();updateChange()" style="background:#c0392b;color:white;border:none;">x</button>
+            `;
             document.getElementById('payment-list').appendChild(div);
             checkPixRow(div.querySelector('.pay-method'));
+            updateChange();
         }
+
         function checkPixRow(sel) {
             const isPix = sel.value.toLowerCase().includes('pix');
             sel.parentElement.querySelector('.pix-check-label').style.display = isPix ? 'flex' : 'none';
             updatePixDisplay();
         }
+
         function updatePixDisplay() {
             const pixRow = Array.from(document.querySelectorAll('.payment-row')).find(r => r.querySelector('.pay-method').value.toLowerCase().includes('pix'));
             const display = document.getElementById('pix-display');
             const key = db.settings.pixKey;
+            
             if(pixRow && key) {
                 const amt = pixRow.querySelector('.pay-amount').value;
                 const payload = createPixPayload(key, "Studio NBV", "Boa Ventura", amt, "NBV"+Date.now());
@@ -556,20 +580,29 @@
 
         function finishOrder() {
             const payRows = document.querySelectorAll('.payment-row');
-            let payments = []; let pixPrintData = null;
+            if(payRows.length === 0) return alert('Adicione uma forma de pagamento!');
+
+            let payments = []; let pixPrintData = null; let currentPaid = 0;
+            
             payRows.forEach(r => {
                 const method = r.querySelector('.pay-method').value;
                 const val = parseFloat(r.querySelector('.pay-amount').value) || 0;
                 const printKey = r.querySelector('.pix-print').checked;
                 const key = db.settings.pixKey;
                 if(val > 0) {
+                    currentPaid += val;
                     payments.push({ method, val });
                     if(method.toLowerCase().includes('pix') && printKey && key) {
                         pixPrintData = { key: key, val: val };
                     }
                 }
             });
+
+            if(payments.length === 0) return alert('Valor pago inválido.');
+
             const client = db.clients.find(c => c.id == document.getElementById('checkout-client').value);
+            const change = Math.max(0, currentPaid - finalTotal);
+
             const sale = {
                 id: Date.now(),
                 date: new Date().toLocaleString('pt-BR'),
@@ -579,6 +612,8 @@
                 subtotal: parseFloat(document.getElementById('total').innerText),
                 discount: (parseFloat(document.getElementById('total').innerText) - finalTotal),
                 total: finalTotal,
+                paid: currentPaid,
+                change: change,
                 payments: payments,
                 link: document.getElementById('gallery-link').value,
                 pixPrint: pixPrintData,
@@ -599,6 +634,12 @@
             document.getElementById('rec-total-val').innerText = sale.total.toFixed(2);
             document.getElementById('rec-payments').innerHTML = sale.payments.map(p => `<div>${p.method}: R$ ${p.val.toFixed(2)}</div>`).join('');
             
+            const recChange = document.getElementById('rec-change');
+            if(sale.change > 0) {
+                recChange.style.display = 'block';
+                recChange.innerText = `TROCO: R$ ${sale.change.toFixed(2)}`;
+            } else { recChange.style.display = 'none'; }
+
             const recPix = document.getElementById('rec-pix-area');
             if(sale.pixPrint) {
                 recPix.style.display = 'block';
@@ -609,19 +650,31 @@
             const qrC = document.getElementById('qrcode'); qrC.innerHTML = '';
             if(sale.link) {
                 document.getElementById('qr-area').style.display = 'block';
-                new QRCode(qrC, { text: sale.link, width: 100, height: 100 });
+                new QRCode(qrC, { text: sale.link, width: 80, height: 80 }); // Forçado 80px no Cupom
             } else document.getElementById('qr-area').style.display = 'none';
             setTimeout(() => window.print(), 500);
+        }
+
+        function deleteSale(id) {
+            if(confirm('Excluir este registro de venda?')) {
+                db.sales = db.sales.filter(s => s.id !== id);
+                saveData(); renderHistory();
+            }
         }
 
         function renderHistory() {
             const list = document.getElementById('h-list');
             list.innerHTML = [...db.sales].sort((a,b)=>b.id-a.id).map(s => 
-                `<div class="history-item"><div><strong>${s.date}</strong> - ${s.client}<br>R$ ${s.total.toFixed(2)}</div><button class="btn" onclick='printReceipt(${JSON.stringify(s)})'>🖨️</button></div>`
+                `<div class="history-item">
+                    <div><strong>${s.date}</strong> - ${s.client}<br>R$ ${s.total.toFixed(2)}</div>
+                    <div>
+                        <button class="btn" onclick='printReceipt(${JSON.stringify(s)})'>🖨️</button>
+                        <button class="btn" onclick='deleteSale(${s.id})' style="background:red;margin-left:5px;">🗑️</button>
+                    </div>
+                </div>`
             ).join('');
         }
 
-        // Funções de Pix apenas para a TELA do PC (Balcão)
         function normalizeStr(str) { return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9 ]/g, "").toUpperCase(); }
         function createPixPayload(key, name, city, amount, txid) {
             const cleanKey = key.trim(); const cleanName = normalizeStr(name).substring(0,25); const cleanCity = normalizeStr(city).substring(0,15);
