@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Studio NBV - PDV 15.0 (Speed)</title>
+    <title>Studio NBV - PDV 16.0 (Elite)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         :root { 
@@ -56,7 +56,6 @@
         .client-item, .history-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #eee; background: white; margin-bottom: 5px; }
         .history-item { border-left: 5px solid var(--accent); box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
 
-        /* LISTA PRODUTOS ORÇAMENTO */
         .bud-item { display: flex; justify-content: space-between; align-items: center; padding: 8px; border-bottom: 1px solid #eee; background: #fff; }
         .bud-item input { width: 60px; text-align: center; padding: 5px; }
 
@@ -95,7 +94,7 @@
 
         <div id="pdv" class="pdv-container">
             <div class="product-area">
-                <input type="text" id="search" class="search-bar" placeholder="[F2] Ex: 1015-10 (Código-Qtd)..." onkeyup="renderGrid()">
+                <input type="text" id="search" class="search-bar" placeholder="[F2] Buscar ou Bipar Código (ex: 1015-10)..." onkeyup="renderGrid()">
                 <div id="grid" class="grid"></div>
             </div>
             <div class="cart-area">
@@ -248,8 +247,9 @@
     <div id="receipt" style="display:none">
         <div id="rec-header" class="rec-header"></div>
         <div class="rec-line"></div>
-        <div id="rec-meta"></div>
-        <div id="rec-addr" style="font-size:10px;"></div>
+        
+        <div id="rec-meta" style="font-size: 1em;"></div>
+        
         <div class="rec-line"></div>
         <table style="width:100%" id="rec-items"></table>
         <div class="rec-line"></div>
@@ -258,6 +258,7 @@
         <div class="rec-total">TOTAL: R$ <span id="rec-total-val"></span></div>
         <div id="rec-payments" style="text-align:right; font-size:10px;"></div>
         <div id="rec-change" style="text-align:right; font-size:12px; font-weight:bold; margin-top:5px; display:none;"></div>
+        
         <div id="rec-pix-area" style="display:none; margin-top:10px; border:2px solid #000; padding:5px; text-align:center;">
             <div style="font-size:14px; font-weight:bold; border-bottom:1px solid #000; margin-bottom:5px;">DADOS PIX</div>
             <div style="font-size:10px;">Chave:</div>
@@ -337,7 +338,6 @@
             applySettings(); document.getElementById('config-modal').style.display = 'none'; saveData(); loadData();
         }
 
-        // --- ATALHOS & EVENTOS ---
         document.addEventListener('keydown', function(e) {
             if (e.key === 'F2') { e.preventDefault(); nav('pdv'); document.getElementById('search').focus(); }
             if (e.key === 'F4') { e.preventDefault(); openCheckout(); }
@@ -345,23 +345,10 @@
             if (e.key === 'Escape') { document.getElementById('checkout-modal').style.display = 'none'; document.getElementById('config-modal').style.display = 'none'; document.getElementById('import-modal').style.display = 'none'; }
         });
 
-        // BUSCA COM HÍFEN (CÓDIGO-QTD)
         document.getElementById('search').addEventListener('keydown', function(e) {
             if(e.key === 'Enter') {
-                let input = this.value.trim();
-                let qty = 1;
-                let term = input.toLowerCase();
-
-                // Verifica padrão CODIGO-QTD (ex: 1015-10)
-                if (input.includes('-')) {
-                    const parts = input.split('-');
-                    const lastPart = parts[parts.length - 1];
-                    if (!isNaN(lastPart) && lastPart > 0) {
-                        qty = parseInt(lastPart);
-                        term = parts.slice(0, -1).join('-').toLowerCase();
-                    }
-                }
-
+                let input = this.value.trim(); let qty = 1; let term = input.toLowerCase();
+                if (input.includes('-')) { const parts = input.split('-'); const lastPart = parts[parts.length - 1]; if (!isNaN(lastPart) && lastPart > 0) { qty = parseInt(lastPart); term = parts.slice(0, -1).join('-').toLowerCase(); } }
                 const exact = db.products.find(p => (p.code && p.code.toLowerCase() === term) || p.name.toLowerCase() === term);
                 if(exact) { addToCart(exact, qty); this.value = ''; renderGrid(); }
             }
@@ -372,73 +359,39 @@
             const name = document.getElementById('p-name').value;
             const price = parseFloat(document.getElementById('p-price').value);
             if(!name || !price) return alert('Preencha nome e preço');
-
             if(editingProductId) {
                 const prod = db.products.find(p => p.id === editingProductId);
                 if(prod) { prod.name = name; prod.code = document.getElementById('p-code').value; prod.price = price; prod.bulkMin = parseInt(document.getElementById('p-bulk-min').value)||0; prod.bulkPrice = parseFloat(document.getElementById('p-bulk-price').value)||0; }
                 cancelProductEdit();
-            } else {
-                db.products.push({ id: Date.now(), name, code: document.getElementById('p-code').value, price, bulkMin: parseInt(document.getElementById('p-bulk-min').value)||0, bulkPrice: parseFloat(document.getElementById('p-bulk-price').value)||0 });
-            }
+            } else { db.products.push({ id: Date.now(), name, code: document.getElementById('p-code').value, price, bulkMin: parseInt(document.getElementById('p-bulk-min').value)||0, bulkPrice: parseFloat(document.getElementById('p-bulk-price').value)||0 }); }
             saveData(); renderAll(); document.getElementById('p-name').value = ''; document.getElementById('p-code').value = ''; document.getElementById('p-price').value = ''; document.getElementById('p-bulk-min').value = ''; document.getElementById('p-bulk-price').value = '';
         }
-
-        function startProductEdit(id) {
-            const p = db.products.find(x => x.id === id); if(!p) return;
-            document.getElementById('p-name').value = p.name; document.getElementById('p-code').value = p.code || ''; document.getElementById('p-price').value = p.price; document.getElementById('p-bulk-min').value = p.bulkMin || ''; document.getElementById('p-bulk-price').value = p.bulkPrice || '';
-            editingProductId = id; document.getElementById('btn-save-prod').innerText = "Atualizar Produto"; document.getElementById('btn-cancel-prod').style.display = "block"; document.getElementById('products').scrollTop = 0;
-        }
-
-        function cancelProductEdit() {
-            editingProductId = null; document.getElementById('p-name').value = ''; document.getElementById('p-code').value = ''; document.getElementById('p-price').value = ''; document.getElementById('p-bulk-min').value = ''; document.getElementById('p-bulk-price').value = '';
-            document.getElementById('btn-save-prod').innerText = "Salvar Produto"; document.getElementById('btn-cancel-prod').style.display = "none";
-        }
-
-        // --- IMPORTAÇÃO ---
+        function startProductEdit(id) { const p = db.products.find(x => x.id === id); if(!p) return; document.getElementById('p-name').value = p.name; document.getElementById('p-code').value = p.code || ''; document.getElementById('p-price').value = p.price; document.getElementById('p-bulk-min').value = p.bulkMin || ''; document.getElementById('p-bulk-price').value = p.bulkPrice || ''; editingProductId = id; document.getElementById('btn-save-prod').innerText = "Atualizar Produto"; document.getElementById('btn-cancel-prod').style.display = "block"; document.getElementById('products').scrollTop = 0; }
+        function cancelProductEdit() { editingProductId = null; document.getElementById('p-name').value = ''; document.getElementById('p-code').value = ''; document.getElementById('p-price').value = ''; document.getElementById('p-bulk-min').value = ''; document.getElementById('p-bulk-price').value = ''; document.getElementById('btn-save-prod').innerText = "Salvar Produto"; document.getElementById('btn-cancel-prod').style.display = "none"; }
         function openImportModal() { document.getElementById('import-modal').style.display = 'flex'; }
         function processImport() {
             const lines = document.getElementById('import-text').value.split('\n'); let count = 0;
-            lines.forEach(line => {
-                const p = line.split(',').map(s => s.trim());
-                if(p.length >= 2 && !isNaN(parseFloat(p[2]))) { db.products.push({ id: Date.now() + Math.random(), code: p[0], name: p[1], price: parseFloat(p[2]), bulkMin: parseInt(p[3])||0, bulkPrice: parseFloat(p[4])||0 }); count++; }
-            });
+            lines.forEach(line => { const p = line.split(',').map(s => s.trim()); if(p.length >= 2 && !isNaN(parseFloat(p[2]))) { db.products.push({ id: Date.now() + Math.random(), code: p[0], name: p[1], price: parseFloat(p[2]), bulkMin: parseInt(p[3])||0, bulkPrice: parseFloat(p[4])||0 }); count++; } });
             if(count > 0) { saveData(); renderAll(); alert(count + ' importados!'); document.getElementById('import-modal').style.display = 'none'; }
         }
 
-        // --- ORÇAMENTOS ---
+        // --- ORÇAMENTO ---
         function filterBudgetProducts() {
-            const term = document.getElementById('bud-search').value.toLowerCase();
-            const grid = document.getElementById('bud-grid'); grid.innerHTML = '';
-            if(term.length === 0) return;
-            db.products.forEach(p => {
-                if(p.name.toLowerCase().includes(term) || (p.code && p.code.includes(term))) {
-                    const d = document.createElement('div'); d.className = 'card'; d.style.padding = '5px'; d.style.fontSize = '12px';
-                    d.innerHTML = `<b>${p.name}</b><br>R$ ${p.price.toFixed(2)}`; d.onclick = () => addToBudget(p); grid.appendChild(d);
-                }
-            });
+            const term = document.getElementById('bud-search').value.toLowerCase(); const grid = document.getElementById('bud-grid'); grid.innerHTML = ''; if(term.length === 0) return;
+            db.products.forEach(p => { if(p.name.toLowerCase().includes(term) || (p.code && p.code.includes(term))) { const d = document.createElement('div'); d.className = 'card'; d.style.padding = '5px'; d.style.fontSize = '12px'; d.innerHTML = `<b>${p.name}</b><br>R$ ${p.price.toFixed(2)}`; d.onclick = () => addToBudget(p); grid.appendChild(d); } });
         }
-        function addToBudget(p) {
-            const exist = budgetCart.find(x => x.id === p.id); if(exist) exist.qty++; else budgetCart.push({...p, qty: 1});
-            document.getElementById('bud-search').value = ''; document.getElementById('bud-grid').innerHTML = ''; renderBudgetCart();
-        }
+        function addToBudget(p) { const exist = budgetCart.find(x => x.id === p.id); if(exist) exist.qty++; else budgetCart.push({...p, qty: 1}); document.getElementById('bud-search').value = ''; document.getElementById('bud-grid').innerHTML = ''; renderBudgetCart(); }
         function updateBudgetQty(id, val) { const item = budgetCart.find(x => x.id === id); if(item) { item.qty = parseInt(val); if(item.qty <= 0) removeFromBudget(id); else renderBudgetCart(); } }
         function removeFromBudget(id) { budgetCart = budgetCart.filter(x => x.id !== id); renderBudgetCart(); }
         function renderBudgetCart() {
             const list = document.getElementById('budget-items-list'); list.innerHTML = '';
             if(budgetCart.length === 0) { list.innerHTML = '<div style="padding:10px;text-align:center;color:#999">Nenhum item</div>'; return; }
-            budgetCart.forEach(i => {
-                let price = i.price; let note = ''; if(i.bulkMin > 0 && i.qty >= i.bulkMin) { price = i.bulkPrice; note = ' (Atacado)'; }
-                list.innerHTML += `<div class="bud-item"><div style="flex:2"><b>${i.name}</b>${note}</div><div style="flex:1; text-align:right">R$ ${(price*i.qty).toFixed(2)}</div><input type="number" value="${i.qty}" onchange="updateBudgetQty(${i.id}, this.value)"><button onclick="removeFromBudget(${i.id})" style="color:red;border:none;background:none;margin-left:5px">x</button></div>`;
-            });
+            budgetCart.forEach(i => { let price = i.price; let note = ''; if(i.bulkMin > 0 && i.qty >= i.bulkMin) { price = i.bulkPrice; note = ' (Atacado)'; } list.innerHTML += `<div class="bud-item"><div style="flex:2"><b>${i.name}</b>${note}</div><div style="flex:1; text-align:right">R$ ${(price*i.qty).toFixed(2)}</div><input type="number" value="${i.qty}" onchange="updateBudgetQty(${i.id}, this.value)"><button onclick="removeFromBudget(${i.id})" style="color:red;border:none;background:none;margin-left:5px">x</button></div>`; });
         }
         function generateBudget() {
             let text = `*ORÇAMENTO - STUDIO NBV*\n----------------------------\n`; let total = 0;
             if(budgetCart.length === 0 && parseFloat(document.getElementById('bud-files').value) === 0) return alert('Adicione itens!');
-            budgetCart.forEach(i => {
-                let price = i.price; if(i.bulkMin > 0 && i.qty >= i.bulkMin) price = i.bulkPrice;
-                const sub = i.qty * price; total += sub;
-                text += `▪ ${i.qty}x *${i.name}*\n   R$ ${price.toFixed(2)} un. = R$ ${sub.toFixed(2)}\n`;
-            });
+            budgetCart.forEach(i => { let price = i.price; if(i.bulkMin > 0 && i.qty >= i.bulkMin) price = i.bulkPrice; const sub = i.qty * price; total += sub; text += `▪ ${i.qty}x *${i.name}*\n   R$ ${price.toFixed(2)} un. = R$ ${sub.toFixed(2)}\n`; });
             const entry = parseFloat(document.getElementById('bud-entry').value) || 0; const files = parseFloat(document.getElementById('bud-files').value) || 0;
             if(files > 0) { text += `▪ Arquivos Digitais: R$ ${files.toFixed(2)}\n`; total += files; }
             text += `----------------------------\n*TOTAL: R$ ${total.toFixed(2)}*\n`;
@@ -451,15 +404,8 @@
         function addClient(isQuick) {
             const name = document.getElementById(isQuick?'qc-name':'c-name').value;
             if(!name) return alert('Nome é obrigatório');
-            if(editingClientId && !isQuick) {
-                const c = db.clients.find(x => x.id === editingClientId);
-                if(c) { c.name = name; c.phone = document.getElementById('c-phone').value; c.addr = document.getElementById('c-addr').value; }
-                cancelClientEdit();
-            } else {
-                const nc = {id: Date.now(), name, phone: document.getElementById(isQuick?'qc-phone':'c-phone').value, addr: document.getElementById(isQuick?'qc-addr':'c-addr').value};
-                db.clients.push(nc);
-                if(isQuick) { saveData(); renderClientSelect(); document.getElementById('checkout-client').value = nc.id; toggleQuickClient(); }
-            }
+            if(editingClientId && !isQuick) { const c = db.clients.find(x => x.id === editingClientId); if(c) { c.name = name; c.phone = document.getElementById('c-phone').value; c.addr = document.getElementById('c-addr').value; } cancelClientEdit(); } 
+            else { const nc = {id: Date.now(), name, phone: document.getElementById(isQuick?'qc-phone':'c-phone').value, addr: document.getElementById(isQuick?'qc-addr':'c-addr').value}; db.clients.push(nc); if(isQuick) { saveData(); renderClientSelect(); document.getElementById('checkout-client').value = nc.id; toggleQuickClient(); } }
             if(!isQuick) { saveData(); renderAll(); document.getElementById('c-name').value=''; document.getElementById('c-phone').value=''; document.getElementById('c-addr').value=''; }
         }
         function startClientEdit(id) { const c = db.clients.find(x=>x.id===id); if(!c)return; document.getElementById('c-name').value=c.name; document.getElementById('c-phone').value=c.phone||''; document.getElementById('c-addr').value=c.addr||''; editingClientId=id; document.getElementById('btn-save-client').innerText="Atualizar"; document.getElementById('btn-cancel-client').style.display='block'; }
@@ -467,164 +413,67 @@
         function deleteClient(id) { if(confirm('Excluir?')) { db.clients = db.clients.filter(c=>c.id!==id); saveData(); renderAll(); } }
         function toggleQuickClient() { const f = document.getElementById('quick-client-form'); f.style.display = f.style.display==='block'?'none':'block'; }
 
-        // --- RENDER & CART ---
+        // --- RENDER ---
         function renderAll() {
             const term = document.getElementById('search').value.toLowerCase();
             const grid = document.getElementById('grid'); grid.innerHTML = '';
-            db.products.forEach(p => {
-                if(p.name.toLowerCase().includes(term) || (p.code && p.code.includes(term))) {
-                    const d = document.createElement('div'); d.className = 'card';
-                    d.innerHTML = `${p.bulkMin>0?`<span class="badge-bulk">>${p.bulkMin}</span>`:''}<b>${p.name}</b><br>R$ ${p.price.toFixed(2)}`;
-                    d.onclick = () => addToCart(p); grid.appendChild(d);
-                }
-            });
+            db.products.forEach(p => { if(p.name.toLowerCase().includes(term) || (p.code && p.code.includes(term))) { const d = document.createElement('div'); d.className = 'card'; d.innerHTML = `${p.bulkMin>0?`<span class="badge-bulk">>${p.bulkMin}</span>`:''}<b>${p.name}</b><br>R$ ${p.price.toFixed(2)}`; d.onclick = () => addToCart(p); grid.appendChild(d); } });
             document.getElementById('p-list').innerHTML = db.products.map(p => `<div style="display:flex;justify-content:space-between;padding:5px;border-bottom:1px solid #eee;"><span>${p.name} (${p.code}) - R$ ${p.price.toFixed(2)}</span><div><button onclick="startProductEdit(${p.id})">✎</button><button onclick="del('products',${p.id})" style="color:red">🗑️</button></div></div>`).join('');
             document.getElementById('c-list').innerHTML = db.clients.map(c => `<div class="client-item"><div><strong>${c.name}</strong><br><small>${c.phone||'-'}</small></div><div class="client-actions"><button onclick="startClientEdit(${c.id})">✎</button><button onclick="deleteClient(${c.id})" style="color:red;">🗑️</button></div></div>`).join('');
         }
         function del(type, id) { if(confirm('Apagar?')) { db[type] = db[type].filter(x => x.id !== id); saveData(); renderAll(); } }
 
-        function addToCart(p, qtyToAdd = 1) {
-            const ex = cart.find(x => x.id === p.id);
-            if(ex) {
-                // Se já existe, pega a quantidade atual e soma a nova
-                updateQty(cart.indexOf(ex), ex.qty + qtyToAdd);
-            } else {
-                // Se é novo, calcula o preço inicial (já verificando atacado para a qtd inicial)
-                let initialPrice = p.price;
-                if(p.bulkMin > 0 && qtyToAdd >= p.bulkMin) initialPrice = p.bulkPrice;
-                cart.push({...p, qty: qtyToAdd, currentPrice: initialPrice});
-                renderCart();
-            }
-        }
+        function addToCart(p, qtyToAdd=1) { const ex = cart.find(x => x.id === p.id); if(ex) updateQty(cart.indexOf(ex), ex.qty + qtyToAdd); else { let ip = p.price; if(p.bulkMin>0 && qtyToAdd>=p.bulkMin) ip=p.bulkPrice; cart.push({...p, qty: qtyToAdd, currentPrice: ip}); renderCart(); } }
+        function updateQty(idx, newQty) { newQty = parseInt(newQty); if(newQty < 1) return; const item = cart[idx]; const original = db.products.find(p => p.id === item.id); item.qty = newQty; if(original && original.bulkMin > 0 && newQty >= original.bulkMin) item.currentPrice = original.bulkPrice; else item.currentPrice = original ? original.price : item.price; renderCart(); }
+        function renderCart() { const list = document.getElementById('cart-list'); list.innerHTML = ''; let total = 0; cart.forEach((i, idx) => { total += i.qty * i.currentPrice; const orig = db.products.find(p => p.id === i.id); const isBulk = orig && orig.bulkMin > 0 && i.qty >= orig.bulkMin; list.innerHTML += `<div class="cart-item"><div style="flex:2"><b>${i.name}</b>${isBulk ? ' <small style="color:orange">*</small>' : ''}</div><div style="flex:1"><input type="number" value="${i.qty}" style="width:40px" onchange="updateQty(${idx},this.value)"></div><div style="flex:1;text-align:right">R$ ${(i.qty*i.currentPrice).toFixed(2)} <span onclick="cart.splice(${idx},1);renderCart()" style="color:red;cursor:pointer">x</span></div></div>`; }); document.getElementById('total').innerText = total.toFixed(2); }
 
-        function updateQty(idx, newQty) {
-            newQty = parseInt(newQty); if(newQty < 1) return;
-            const item = cart[idx]; const original = db.products.find(p => p.id === item.id); item.qty = newQty;
-            if(original && original.bulkMin > 0 && newQty >= original.bulkMin) item.currentPrice = original.bulkPrice; else item.currentPrice = original ? original.price : item.price;
-            renderCart();
-        }
-        function renderCart() {
-            const list = document.getElementById('cart-list'); list.innerHTML = ''; let total = 0;
-            cart.forEach((i, idx) => {
-                total += i.qty * i.currentPrice;
-                const orig = db.products.find(p => p.id === i.id); const isBulk = orig && orig.bulkMin > 0 && i.qty >= orig.bulkMin;
-                list.innerHTML += `<div class="cart-item"><div style="flex:2"><b>${i.name}</b>${isBulk ? ' <small style="color:orange">*</small>' : ''}</div><div style="flex:1"><input type="number" value="${i.qty}" style="width:40px" onchange="updateQty(${idx},this.value)"></div><div style="flex:1;text-align:right">R$ ${(i.qty*i.currentPrice).toFixed(2)} <span onclick="cart.splice(${idx},1);renderCart()" style="color:red;cursor:pointer">x</span></div></div>`;
-            });
-            document.getElementById('total').innerText = total.toFixed(2);
-        }
-
-        // --- CHECKOUT ---
         let finalTotal = 0;
-        function openCheckout() {
-            if(!cart.length) return alert('Carrinho vazio');
-            document.getElementById('checkout-modal').style.display = 'flex';
-            renderClientSelect(); document.getElementById('payment-list').innerHTML = '';
-            document.getElementById('disc-val').value = 0; document.getElementById('gallery-link').value = '';
-            document.getElementById('pix-display').style.display = 'none'; document.getElementById('change-display').style.display = 'none';
-            calcTotal(); addPaymentRow(); 
-        }
+        function openCheckout() { if(!cart.length) return alert('Carrinho vazio'); document.getElementById('checkout-modal').style.display = 'flex'; renderClientSelect(); document.getElementById('payment-list').innerHTML = ''; document.getElementById('disc-val').value = 0; document.getElementById('gallery-link').value = ''; document.getElementById('pix-display').style.display = 'none'; document.getElementById('change-display').style.display = 'none'; calcTotal(); addPaymentRow(); }
         function closeCheckout() { document.getElementById('checkout-modal').style.display = 'none'; }
         function renderClientSelect() { const sel = document.getElementById('checkout-client'); sel.innerHTML = '<option value="">Consumidor Final</option>'; db.clients.forEach(c => sel.innerHTML += `<option value="${c.id}">${c.name}</option>`); }
-        function calcTotal() {
-            const sub = parseFloat(document.getElementById('total').innerText);
-            const dVal = parseFloat(document.getElementById('disc-val').value) || 0;
-            const dType = document.getElementById('disc-type').value;
-            let discount = (dType === '%') ? sub * (dVal/100) : dVal;
-            finalTotal = Math.max(0, sub - discount);
-            document.getElementById('checkout-final').innerText = finalTotal.toFixed(2);
-            updateChange(); return finalTotal;
-        }
-        function updateChange() {
-            let currentPaid = 0; document.querySelectorAll('.pay-amount').forEach(el => currentPaid += parseFloat(el.value)||0);
-            const change = currentPaid - finalTotal;
-            const changeDisplay = document.getElementById('change-display');
-            if(change > 0) { changeDisplay.style.display = 'block'; document.getElementById('change-val').innerText = change.toFixed(2); } else { changeDisplay.style.display = 'none'; }
-        }
-        function addPaymentRow() {
-            let currentPaid = 0; document.querySelectorAll('.pay-amount').forEach(el => currentPaid += parseFloat(el.value)||0);
-            const remaining = Math.max(0, finalTotal - currentPaid);
-            const div = document.createElement('div'); div.className = 'payment-row';
-            const opts = db.settings.payMethods.split(',').map(m => `<option>${m.trim()}</option>`).join('');
-            div.innerHTML = `<select class="pay-method" onchange="checkPixRow(this)">${opts}</select><input type="number" class="pay-amount" value="${remaining.toFixed(2)}" step="0.01" onchange="updatePixDisplay(); updateChange();"><label class="pix-check-label" style="display:none"><input type="checkbox" class="pix-print"> 🖨️ Key</label><button onclick="this.parentElement.remove();updatePixDisplay();updateChange()" style="background:#c0392b;color:white;border:none;">x</button>`;
-            document.getElementById('payment-list').appendChild(div);
-            checkPixRow(div.querySelector('.pay-method')); updateChange();
-        }
-        function checkPixRow(sel) {
-            const isPix = sel.value.toLowerCase().includes('pix');
-            sel.parentElement.querySelector('.pix-check-label').style.display = isPix ? 'flex' : 'none';
-            updatePixDisplay();
-        }
-        function updatePixDisplay() {
-            const pixRow = Array.from(document.querySelectorAll('.payment-row')).find(r => r.querySelector('.pay-method').value.toLowerCase().includes('pix'));
-            const display = document.getElementById('pix-display'); const key = db.settings.pixKey;
-            if(pixRow && key) {
-                const amt = pixRow.querySelector('.pay-amount').value;
-                const payload = createPixPayload(key, "Studio NBV", "Boa Ventura", amt, "NBV"+Date.now());
-                display.style.display = 'block'; display.setAttribute('data-code', payload);
-                const qrDiv = document.getElementById('pix-qrcode-checkout'); qrDiv.innerHTML = '';
-                new QRCode(qrDiv, { text: payload, width: 100, height: 100 });
-            } else { display.style.display = 'none'; }
-        }
+        function calcTotal() { const sub = parseFloat(document.getElementById('total').innerText); const dVal = parseFloat(document.getElementById('disc-val').value) || 0; const dType = document.getElementById('disc-type').value; let discount = (dType === '%') ? sub * (dVal/100) : dVal; finalTotal = Math.max(0, sub - discount); document.getElementById('checkout-final').innerText = finalTotal.toFixed(2); updateChange(); return finalTotal; }
+        function updateChange() { let currentPaid = 0; document.querySelectorAll('.pay-amount').forEach(el => currentPaid += parseFloat(el.value)||0); const change = currentPaid - finalTotal; const changeDisplay = document.getElementById('change-display'); if(change > 0) { changeDisplay.style.display = 'block'; document.getElementById('change-val').innerText = change.toFixed(2); } else { changeDisplay.style.display = 'none'; } }
+        function addPaymentRow() { let currentPaid = 0; document.querySelectorAll('.pay-amount').forEach(el => currentPaid += parseFloat(el.value)||0); const remaining = Math.max(0, finalTotal - currentPaid); const div = document.createElement('div'); div.className = 'payment-row'; const opts = db.settings.payMethods.split(',').map(m => `<option>${m.trim()}</option>`).join(''); div.innerHTML = `<select class="pay-method" onchange="checkPixRow(this)">${opts}</select><input type="number" class="pay-amount" value="${remaining.toFixed(2)}" step="0.01" onchange="updatePixDisplay(); updateChange();"><label class="pix-check-label" style="display:none"><input type="checkbox" class="pix-print"> 🖨️ Key</label><button onclick="this.parentElement.remove();updatePixDisplay();updateChange()" style="background:#c0392b;color:white;border:none;">x</button>`; document.getElementById('payment-list').appendChild(div); checkPixRow(div.querySelector('.pay-method')); updateChange(); }
+        function checkPixRow(sel) { const isPix = sel.value.toLowerCase().includes('pix'); sel.parentElement.querySelector('.pix-check-label').style.display = isPix ? 'flex' : 'none'; updatePixDisplay(); }
+        function updatePixDisplay() { const pixRow = Array.from(document.querySelectorAll('.payment-row')).find(r => r.querySelector('.pay-method').value.toLowerCase().includes('pix')); const display = document.getElementById('pix-display'); const key = db.settings.pixKey; if(pixRow && key) { const amt = pixRow.querySelector('.pay-amount').value; const payload = createPixPayload(key, "Studio NBV", "Boa Ventura", amt, "NBV"+Date.now()); display.style.display = 'block'; display.setAttribute('data-code', payload); const qrDiv = document.getElementById('pix-qrcode-checkout'); qrDiv.innerHTML = ''; new QRCode(qrDiv, { text: payload, width: 100, height: 100 }); } else { display.style.display = 'none'; } }
         function copyPix() { navigator.clipboard.writeText(document.getElementById('pix-display').getAttribute('data-code')); alert('Copiado!'); }
 
         function finishOrder() {
             const payRows = document.querySelectorAll('.payment-row'); if(payRows.length === 0) return alert('Adicione pagamento');
             let payments = []; let pixPrintData = null; let currentPaid = 0;
-            payRows.forEach(r => {
-                const method = r.querySelector('.pay-method').value; const val = parseFloat(r.querySelector('.pay-amount').value) || 0;
-                const printKey = r.querySelector('.pix-print').checked; const key = db.settings.pixKey;
-                if(val > 0) {
-                    currentPaid += val; payments.push({ method, val });
-                    if(method.toLowerCase().includes('pix') && printKey && key) pixPrintData = { key: key, val: val };
-                }
-            });
+            payRows.forEach(r => { const method = r.querySelector('.pay-method').value; const val = parseFloat(r.querySelector('.pay-amount').value) || 0; const printKey = r.querySelector('.pix-print').checked; const key = db.settings.pixKey; if(val > 0) { currentPaid += val; payments.push({ method, val }); if(method.toLowerCase().includes('pix') && printKey && key) pixPrintData = { key: key, val: val }; } });
             if(payments.length === 0) return alert('Valor inválido');
             const client = db.clients.find(c => c.id == document.getElementById('checkout-client').value);
             const change = Math.max(0, currentPaid - finalTotal);
-            const sale = {
-                id: Date.now(), date: new Date().toLocaleString('pt-BR'), client: client ? client.name : 'Consumidor Final', addr: client ? client.addr : '',
-                items: cart.map(i => ({...i, price: i.currentPrice})), subtotal: parseFloat(document.getElementById('total').innerText),
-                discount: (parseFloat(document.getElementById('total').innerText) - finalTotal), total: finalTotal, paid: currentPaid, change: change,
-                payments: payments, link: document.getElementById('gallery-link').value, pixPrint: pixPrintData,
-                header: db.settings.headerText, footer: db.settings.footerText
-            };
+            const sale = { id: Date.now(), date: new Date().toLocaleString('pt-BR'), client: client ? client.name : 'Consumidor Final', addr: client ? client.addr : '', phone: client ? client.phone : '', items: cart.map(i => ({...i, price: i.currentPrice})), subtotal: parseFloat(document.getElementById('total').innerText), discount: (parseFloat(document.getElementById('total').innerText) - finalTotal), total: finalTotal, paid: currentPaid, change: change, payments: payments, link: document.getElementById('gallery-link').value, pixPrint: pixPrintData, header: db.settings.headerText, footer: db.settings.footerText };
             db.sales.push(sale); saveData(); printReceipt(sale); cart = []; renderCart(); closeCheckout();
         }
 
         function printReceipt(sale) {
             document.getElementById('rec-header').innerText = sale.header; document.getElementById('rec-footer').innerText = sale.footer;
-            document.getElementById('rec-meta').innerHTML = `Data: ${sale.date}<br>Cliente: ${sale.client}`;
-            document.getElementById('rec-addr').innerText = sale.addr ? `End: ${sale.addr}` : '';
+            // ATUALIZAÇÃO V16: ESPAÇAMENTO E WHATSAPP
+            document.getElementById('rec-meta').innerHTML = `
+                <div style="margin-bottom: 8px;">Data: ${sale.date}</div>
+                <div style="margin-bottom: 5px; font-weight: bold; font-size: 1.1em;">${sale.client}</div>
+                ${sale.phone ? `<div style="margin-bottom: 5px;">📱 ${sale.phone}</div>` : ''}
+                ${sale.addr ? `<div style="margin-bottom: 5px;">📍 ${sale.addr}</div>` : ''}
+            `;
+            // Limpa o antigo endereço para não duplicar
+            document.getElementById('rec-addr').innerHTML = '';
+
             document.getElementById('rec-items').innerHTML = sale.items.map(i => `<tr><td>${i.qty}x ${i.name}</td><td align="right">R$ ${(i.qty*i.price).toFixed(2)}</td></tr>`).join('');
-            document.getElementById('rec-sub').innerText = sale.subtotal.toFixed(2); document.getElementById('rec-disc').innerText = sale.discount.toFixed(2);
-            document.getElementById('rec-total-val').innerText = sale.total.toFixed(2);
+            document.getElementById('rec-sub').innerText = sale.subtotal.toFixed(2); document.getElementById('rec-disc').innerText = sale.discount.toFixed(2); document.getElementById('rec-total-val').innerText = sale.total.toFixed(2);
             document.getElementById('rec-payments').innerHTML = sale.payments.map(p => `<div>${p.method}: R$ ${p.val.toFixed(2)}</div>`).join('');
-            const recChange = document.getElementById('rec-change');
-            if(sale.change > 0) { recChange.style.display = 'block'; recChange.innerText = `TROCO: R$ ${sale.change.toFixed(2)}`; } else { recChange.style.display = 'none'; }
-            const recPix = document.getElementById('rec-pix-area');
-            if(sale.pixPrint) { recPix.style.display = 'block'; document.getElementById('rec-pix-key').innerText = sale.pixPrint.key; document.getElementById('rec-pix-amount').innerText = `Valor: R$ ${sale.pixPrint.val.toFixed(2)}`; } else { recPix.style.display = 'none'; }
-            const qrC = document.getElementById('qrcode'); qrC.innerHTML = '';
-            if(sale.link) { document.getElementById('qr-area').style.display = 'block'; new QRCode(qrC, { text: sale.link, width: 80, height: 80 }); } else document.getElementById('qr-area').style.display = 'none';
+            const recChange = document.getElementById('rec-change'); if(sale.change > 0) { recChange.style.display = 'block'; recChange.innerText = `TROCO: R$ ${sale.change.toFixed(2)}`; } else { recChange.style.display = 'none'; }
+            const recPix = document.getElementById('rec-pix-area'); if(sale.pixPrint) { recPix.style.display = 'block'; document.getElementById('rec-pix-key').innerText = sale.pixPrint.key; document.getElementById('rec-pix-amount').innerText = `Valor a Pagar: R$ ${sale.pixPrint.val.toFixed(2)}`; } else { recPix.style.display = 'none'; }
+            const qrC = document.getElementById('qrcode'); qrC.innerHTML = ''; if(sale.link) { document.getElementById('qr-area').style.display = 'block'; new QRCode(qrC, { text: sale.link, width: 80, height: 80 }); } else document.getElementById('qr-area').style.display = 'none';
             setTimeout(() => window.print(), 500);
         }
 
         function deleteSale(id) { if(confirm('Excluir?')) { db.sales = db.sales.filter(s => s.id !== id); saveData(); renderHistory(); } }
-        function renderHistory() {
-            const list = document.getElementById('h-list');
-            list.innerHTML = [...db.sales].sort((a,b)=>b.id-a.id).map(s => `<div class="history-item"><div><strong>${s.date}</strong> - ${s.client}<br>R$ ${s.total.toFixed(2)}</div><div><button class="btn" onclick='printReceipt(${JSON.stringify(s)})'>🖨️</button><button class="btn" onclick='deleteSale(${s.id})' style="background:red;margin-left:5px;">🗑️</button></div></div>`).join('');
-        }
-
+        function renderHistory() { const list = document.getElementById('h-list'); list.innerHTML = [...db.sales].sort((a,b)=>b.id-a.id).map(s => `<div class="history-item"><div><strong>${s.date}</strong> - ${s.client}<br>R$ ${s.total.toFixed(2)}</div><div><button class="btn" onclick='printReceipt(${JSON.stringify(s)})'>🖨️</button><button class="btn" onclick='deleteSale(${s.id})' style="background:red;margin-left:5px;">🗑️</button></div></div>`).join(''); }
         function normalizeStr(str) { return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9 ]/g, "").toUpperCase(); }
-        function createPixPayload(key, name, city, amount, txid) {
-            const cleanKey = key.trim(); const cleanName = normalizeStr(name).substring(0,25); const cleanCity = normalizeStr(city).substring(0,15);
-            const cleanTxid = normalizeStr(txid).substring(0,25) || "***"; const cleanAmount = parseFloat(amount).toFixed(2);
-            function f(id, v) { return id + v.length.toString().padStart(2,'0') + v; }
-            let p = "00020126" + (14+cleanKey.length+4) + "0014BR.GOV.BCB.PIX01" + (cleanKey.length).toString().padStart(2,'0') + cleanKey;
-            p += "520400005303986"; if(parseFloat(amount)>0) p += f("54", cleanAmount);
-            p += "5802BR" + f("59",cleanName) + f("60",cleanCity) + f("62", f("05",cleanTxid)) + "6304";
-            let crc = 0xFFFF; for(let i=0; i<p.length; i++) { crc ^= p.charCodeAt(i) << 8; for(let j=0; j<8; j++) crc = (crc & 0x8000) ? (crc << 1) ^ 0x1021 : crc << 1; }
-            return p + (crc & 0xFFFF).toString(16).toUpperCase().padStart(4,'0');
-        }
+        function createPixPayload(key, name, city, amount, txid) { const cleanKey = key.trim(); const cleanName = normalizeStr(name).substring(0,25); const cleanCity = normalizeStr(city).substring(0,15); const cleanTxid = normalizeStr(txid).substring(0,25) || "***"; const cleanAmount = parseFloat(amount).toFixed(2); function f(id, v) { return id + v.length.toString().padStart(2,'0') + v; } let p = "00020126" + (14+cleanKey.length+4) + "0014BR.GOV.BCB.PIX01" + (cleanKey.length).toString().padStart(2,'0') + cleanKey; p += "520400005303986"; if(parseFloat(amount)>0) p += f("54", cleanAmount); p += "5802BR" + f("59",cleanName) + f("60",cleanCity) + f("62", f("05",cleanTxid)) + "6304"; let crc = 0xFFFF; for(let i=0; i<p.length; i++) { crc ^= p.charCodeAt(i) << 8; for(let j=0; j<8; j++) crc = (crc & 0x8000) ? (crc << 1) ^ 0x1021 : crc << 1; } return p + (crc & 0xFFFF).toString(16).toUpperCase().padStart(4,'0'); }
 
         if(auth.token) loadData(); else openConfig();
     </script>
