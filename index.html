@@ -3,28 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Studio NBV - PDV 4.0</title>
+    <title>Studio NBV - PDV 5.0</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         :root { 
             --primary: #2c3e50; --accent: #e67e22; --success: #27ae60; --danger: #c0392b; 
-            /* Variáveis de Impressão Dinâmicas (Controladas pelo JS) */
-            --print-width: 48mm; 
-            --print-font: 11px;
+            --print-width: 48mm; --print-font: 11px;
         }
         body { font-family: 'Segoe UI', sans-serif; margin: 0; background: #f4f4f4; display: flex; height: 100vh; overflow: hidden; }
         
-        /* Layout */
+        /* Layout & UI Elements */
         #sidebar { width: 80px; background: var(--primary); display: flex; flex-direction: column; align-items: center; padding-top: 20px; color: white; }
         .nav-btn { background: none; border: none; color: white; font-size: 24px; margin-bottom: 20px; cursor: pointer; transition: 0.3s; opacity: 0.7; }
         .nav-btn:hover, .nav-btn.active { opacity: 1; transform: scale(1.1); }
         .nav-bottom { margin-top: auto; margin-bottom: 20px; }
-
+        
         #main-content { flex: 1; display: flex; overflow: hidden; position: relative; }
         #status-bar { position: absolute; top: 0; left: 0; width: 100%; height: 5px; background: transparent; z-index: 2000; }
         .loading-line { height: 100%; background: var(--accent); width: 0%; transition: width 0.3s; }
 
-        /* PDV & Grids */
         .pdv-container { display: flex; width: 100%; height: 100%; }
         .product-area { flex: 2; padding: 20px; overflow-y: auto; border-right: 1px solid #ddd; }
         .cart-area { flex: 1; background: white; display: flex; flex-direction: column; box-shadow: -2px 0 5px rgba(0,0,0,0.05); }
@@ -35,55 +32,42 @@
         .card:hover { border-color: var(--accent); transform: translateY(-2px); }
         .badge-bulk { position: absolute; top: 5px; right: 5px; background: var(--accent); color: white; font-size: 10px; padding: 2px 5px; border-radius: 4px; }
         
-        /* Cart */
         .cart-list { flex: 1; overflow-y: auto; padding: 10px; }
         .cart-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #eee; font-size: 14px; }
         .cart-footer { padding: 20px; background: #f8f9fa; border-top: 1px solid #ddd; }
         .btn-checkout { width: 100%; padding: 15px; background: var(--success); color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; }
 
-        /* Forms */
         .panel { padding: 30px; width: 100%; overflow-y: auto; display: none; }
         .form-group { margin-bottom: 15px; }
         .form-group label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 12px; }
-        .form-group input, .form-group select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; font-family: inherit; }
         .row-inputs { display: flex; gap: 10px; }
         .btn { padding: 10px 20px; background: var(--primary); color: white; border: none; border-radius: 5px; cursor: pointer; }
         
-        /* Modais */
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); justify-content: center; align-items: center; z-index: 1000; }
         .modal-content { background: white; padding: 25px; border-radius: 8px; width: 500px; max-width: 95%; max-height: 90vh; overflow-y: auto; }
         
-        /* Checkout Extra */
-        .payment-row { display: flex; gap: 5px; margin-bottom: 5px; }
-        .payment-row select { flex: 1; }
-        .payment-row input { width: 100px; }
-        #quick-client-form { display: none; background: #f0f0f0; padding: 10px; border-radius: 5px; margin-bottom: 10px; border: 1px dashed #999; }
-        
-        /* Pix Area */
-        #pix-display { margin-top: 10px; padding: 10px; background: #e8f8f5; border: 1px solid #27ae60; border-radius: 5px; text-align: center; display: none; }
-        #pix-code-text { font-family: monospace; font-size: 10px; word-break: break-all; background: white; padding: 5px; border: 1px solid #ddd; margin-top: 5px; }
+        /* Payment Rows */
+        .payment-row { display: flex; gap: 5px; margin-bottom: 5px; align-items: center; }
+        .payment-row select { flex: 2; }
+        .payment-row input { flex: 1; }
+        .pix-check-label { font-size: 10px; display: flex; flex-direction: column; align-items: center; line-height: 1; cursor: pointer; }
 
-        /* History */
-        .history-item { background: white; padding: 15px; margin-bottom: 10px; border-radius: 5px; border-left: 5px solid var(--accent); box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; }
-
-        /* --- IMPRESSÃO (58mm Ajustável) --- */
+        /* Receipt Print CSS */
         @media print {
             body * { visibility: hidden; }
             #receipt, #receipt * { visibility: visible; }
             #receipt { 
                 position: absolute; left: 0; top: 0; 
-                width: var(--print-width); /* Ajustável */
-                margin: 0; padding: 2px;
+                width: var(--print-width); margin: 0; padding: 2px;
                 font-family: 'Arial Black', 'Arial', sans-serif; 
-                font-weight: 900; 
-                font-size: var(--print-font); /* Ajustável */
-                color: #000; line-height: 1.2;
-                display: block !important; 
+                font-weight: 900; font-size: var(--print-font); 
+                color: #000; line-height: 1.2; display: block !important; 
             }
             .rec-line { border-bottom: 2px dashed #000; margin: 5px 0; }
-            .rec-header { text-align: center; font-size: calc(var(--print-font) + 2px); margin-bottom: 10px; }
+            .rec-header, .rec-footer { text-align: center; white-space: pre-wrap; margin-bottom: 10px; }
             .rec-total { font-size: calc(var(--print-font) + 4px); text-align: right; margin-top: 5px; }
-            #qrcode img { margin: 10px auto; display: block; max-width: 80px; }
+            img { margin: 5px auto; display: block; max-width: 100px; }
             @page { size: 58mm auto; margin: 0; }
         }
     </style>
@@ -91,13 +75,11 @@
 <body>
 
     <div id="sidebar">
-        <button class="nav-btn active" onclick="nav('pdv')" title="Caixa">🛒</button>
-        <button class="nav-btn" onclick="nav('products')" title="Produtos">📦</button>
-        <button class="nav-btn" onclick="nav('clients')" title="Clientes">👥</button>
-        <button class="nav-btn" onclick="nav('history')" title="Histórico">📜</button>
-        <div class="nav-bottom">
-            <button class="nav-btn" onclick="openConfig()" title="Configurações">⚙️</button>
-        </div>
+        <button class="nav-btn active" onclick="nav('pdv')">🛒</button>
+        <button class="nav-btn" onclick="nav('products')">📦</button>
+        <button class="nav-btn" onclick="nav('clients')">👥</button>
+        <button class="nav-btn" onclick="nav('history')">📜</button>
+        <div class="nav-bottom"><button class="nav-btn" onclick="openConfig()">⚙️</button></div>
     </div>
 
     <div id="main-content">
@@ -122,11 +104,9 @@
             <h2>Produtos</h2>
             <div class="form-group"><label>Nome</label><input id="p-name"></div>
             <div class="form-group"><label>Código</label><input id="p-code"></div>
-            <div class="row-inputs">
-                <div class="form-group" style="flex:1"><label>Preço</label><input id="p-price" type="number" step="0.01"></div>
-            </div>
+            <div class="row-inputs"><div class="form-group" style="flex:1"><label>Preço</label><input id="p-price" type="number" step="0.01"></div></div>
             <div style="background:#eef2f5; padding:10px; border-radius:5px; margin-bottom:15px; border-left:3px solid var(--accent);">
-                <h4 style="margin:0 0 10px 0;">Atacado (Opcional)</h4>
+                <h4>Atacado (Opcional)</h4>
                 <div class="row-inputs">
                     <div class="form-group" style="flex:1"><label>Acima de:</label><input id="p-bulk-min" type="number"></div>
                     <div class="form-group" style="flex:1"><label>Novo Preço:</label><input id="p-bulk-price" type="number" step="0.01"></div>
@@ -140,7 +120,7 @@
             <h2>Clientes</h2>
             <div class="form-group"><label>Nome</label><input id="c-name"></div>
             <div class="form-group"><label>WhatsApp</label><input id="c-phone"></div>
-            <div class="form-group"><label>Endereço (Rua, Nº, Bairro)</label><input id="c-addr"></div>
+            <div class="form-group"><label>Endereço</label><input id="c-addr"></div>
             <button class="btn" onclick="addClient(false)">Salvar</button>
             <hr><div id="c-list"></div>
         </div>
@@ -155,34 +135,23 @@
     <div id="config-modal" class="modal">
         <div class="modal-content">
             <h3>⚙️ Configurações</h3>
-            
-            <details style="margin-bottom:10px;">
-                <summary style="font-weight:bold; cursor:pointer">☁️ Conexão GitHub</summary>
-                <div class="form-group"><label>Usuário:</label><input id="gh-user"></div>
-                <div class="form-group"><label>Repositório:</label><input id="gh-repo"></div>
-                <div class="form-group"><label>Token:</label><input type="password" id="gh-token"></div>
+            <details style="margin-bottom:10px;"><summary>☁️ GitHub</summary>
+                <div class="form-group"><input id="gh-user" placeholder="User"></div>
+                <div class="form-group"><input id="gh-repo" placeholder="Repo"></div>
+                <div class="form-group"><input type="password" id="gh-token" placeholder="Token"></div>
             </details>
-
-            <details style="margin-bottom:10px;">
-                <summary style="font-weight:bold; cursor:pointer">🖨️ Impressão & Visual</summary>
+            <details style="margin-bottom:10px;"><summary>🖨️ Cupom Personalizado</summary>
                 <div class="row-inputs">
-                    <div class="form-group"><label>Largura Cupom (ex: 48mm):</label><input id="cfg-print-width" placeholder="48mm"></div>
-                    <div class="form-group"><label>Tamanho Fonte (ex: 11px):</label><input id="cfg-print-font" placeholder="11px"></div>
+                    <div class="form-group"><label>Largura (48mm):</label><input id="cfg-print-width"></div>
+                    <div class="form-group"><label>Fonte (11px):</label><input id="cfg-print-font"></div>
                 </div>
+                <div class="form-group"><label>Cabeçalho do Cupom:</label><textarea id="cfg-header" rows="3"></textarea></div>
+                <div class="form-group"><label>Rodapé do Cupom:</label><textarea id="cfg-footer" rows="2"></textarea></div>
             </details>
-
-            <details style="margin-bottom:10px;">
-                <summary style="font-weight:bold; cursor:pointer">💳 Pagamento & Pix</summary>
-                <div class="form-group">
-                    <label>Chave Pix (CPF/CNPJ/Cel/Email):</label>
-                    <input id="cfg-pix-key" placeholder="Apenas numeros">
-                </div>
-                <div class="form-group">
-                    <label>Formas de Pagamento (Separadas por vírgula):</label>
-                    <input id="cfg-pay-methods" placeholder="Pix,Dinheiro,Cartão">
-                </div>
+            <details style="margin-bottom:10px;"><summary>💳 Pagamento</summary>
+                <div class="form-group"><label>Chave Pix:</label><input id="cfg-pix-key"></div>
+                <div class="form-group"><label>Meios (separar por ,):</label><input id="cfg-pay-methods"></div>
             </details>
-
             <button class="btn" style="width:100%" onclick="saveConfig()">Salvar Tudo</button>
         </div>
     </div>
@@ -192,28 +161,33 @@
             <h3>Finalizar Venda</h3>
             <div class="form-group" style="display:flex; gap:5px; align-items:end;">
                 <div style="flex:1"><label>Cliente:</label><select id="checkout-client"></select></div>
-                <button class="btn" onclick="toggleQuickClient()" title="Novo Cliente" style="padding:10px;">+</button>
+                <button class="btn" onclick="toggleQuickClient()" title="Novo" style="padding:10px;">+</button>
             </div>
-            
-            <div id="quick-client-form">
-                <h4>Novo Cliente</h4>
+            <div id="quick-client-form" style="display:none;background:#eee;padding:10px;margin-bottom:10px;">
                 <div class="form-group"><input id="qc-name" placeholder="Nome"></div>
-                <div class="form-group"><input id="qc-phone" placeholder="WhatsApp"></div>
+                <div class="form-group"><input id="qc-phone" placeholder="Zap"></div>
                 <div class="form-group"><input id="qc-addr" placeholder="Endereço"></div>
-                <button class="btn" style="background:var(--success)" onclick="addClient(true)">Cadastrar</button>
+                <button class="btn" onclick="addClient(true)">Cadastrar</button>
+            </div>
+
+            <div style="background:#fff3cd; padding:10px; border-radius:5px; margin-bottom:10px; border:1px solid #ffeeba;">
+                <div class="row-inputs" style="align-items:center;">
+                    <span style="font-weight:bold">Desconto:</span>
+                    <input type="number" id="disc-val" value="0" style="width:70px" onchange="calcTotal()">
+                    <select id="disc-type" style="width:60px" onchange="calcTotal()"><option value="$">R$</option><option value="%">%</option></select>
+                </div>
             </div>
 
             <div class="form-group">
-                <label>Pagamentos (Total: R$ <span id="checkout-total">0.00</span>)</label>
+                <label>Total Final: R$ <span id="checkout-final" style="font-size:1.2em;color:var(--success)">0.00</span></label>
                 <div id="payment-list"></div>
-                <button class="btn" style="background:#ddd; color:black; width:100%; margin-top:5px;" onclick="addPaymentRow()">+ Add Pagamento</button>
+                <button class="btn" style="background:#ddd; color:#000; width:100%; margin-top:5px;" onclick="addPaymentRow()">+ Add Pagamento</button>
             </div>
-
-            <div id="pix-display">
-                <strong>Pagar com Pix</strong>
-                <div id="pix-qrcode-checkout" style="display:flex; justify-content:center; margin:10px 0;"></div>
-                <div id="pix-code-text"></div>
-                <button class="btn" style="margin-top:5px; font-size:12px;" onclick="copyPix()">Copiar Código</button>
+            
+            <div id="pix-display" style="display:none; text-align:center; background:#e8f8f5; padding:10px; border:1px solid #27ae60; margin-top:5px;">
+                <strong>QR Code Pix (Tela)</strong>
+                <div id="pix-qrcode-checkout" style="display:flex; justify-content:center; margin:5px;"></div>
+                <button class="btn" style="font-size:10px" onclick="copyPix()">Copiar Código</button>
             </div>
 
             <div class="form-group"><label>Link Galeria (QR Code Cupom):</label><input id="gallery-link"></div>
@@ -226,31 +200,47 @@
     </div>
 
     <div id="receipt" style="display:none">
-        <div class="rec-header"><strong>STUDIO NBV</strong><br>Boa Ventura de São Roque</div>
+        <div id="rec-header" class="rec-header"></div>
         <div class="rec-line"></div>
         <div id="rec-meta"></div>
-        <div id="rec-addr" style="font-size: 10px; margin-bottom:5px;"></div>
+        <div id="rec-addr" style="font-size:10px;"></div>
         <div class="rec-line"></div>
         <table style="width:100%" id="rec-items"></table>
         <div class="rec-line"></div>
+        <div style="display:flex; justify-content:space-between"><span>Subtotal:</span><span id="rec-sub"></span></div>
+        <div style="display:flex; justify-content:space-between"><span>Desconto:</span><span id="rec-disc"></span></div>
         <div class="rec-total">TOTAL: R$ <span id="rec-total-val"></span></div>
         <div id="rec-payments" style="text-align:right; font-size:10px;"></div>
-        <div id="qr-area" style="text-align:center; margin-top:10px; display:none;"><span>Fotos:</span><div id="qrcode"></div></div>
-        <div style="text-align:center; margin-top:10px; font-size:10px;">Obrigado!</div>
+        
+        <div id="rec-pix-area" style="display:none; text-align:center; margin-top:10px; border:1px dashed #000; padding:5px;">
+            <div style="font-size:10px">PAGAMENTO PIX:</div>
+            <div id="rec-qrcode-pix"></div>
+            <div style="font-size:9px" id="rec-pix-val"></div>
+        </div>
+
+        <div id="qr-area" style="text-align:center; margin-top:10px; display:none;">
+            <span>Acesse suas fotos:</span><div id="qrcode"></div>
+        </div>
+        
+        <div id="rec-footer" class="rec-footer" style="font-size:10px; margin-top:10px;"></div>
     </div>
 
     <script>
         // --- CORE ---
         let db = { products: [], clients: [], sales: [] };
         let cart = [];
-        let config = JSON.parse(localStorage.getItem('nbv_config_v4')) || { 
-            printWidth: '48mm', printFont: '11px', pixKey: '', payMethods: 'Pix,Dinheiro,Cartão Crédito,Cartão Débito'
+        let config = JSON.parse(localStorage.getItem('nbv_config_v5')) || { 
+            printWidth: '48mm', printFont: '11px', pixKey: '', payMethods: 'Pix,Dinheiro,Cartão',
+            headerText: 'STUDIO NBV\nBoa Ventura de São Roque', footerText: 'Obrigado pela preferência!'
         };
         let fileSha = '';
 
-        // Aplica configs visuais ao iniciar
-        document.documentElement.style.setProperty('--print-width', config.printWidth);
-        document.documentElement.style.setProperty('--print-font', config.printFont);
+        // Apply visual settings
+        function applyStyles() {
+            document.documentElement.style.setProperty('--print-width', config.printWidth);
+            document.documentElement.style.setProperty('--print-font', config.printFont);
+        }
+        applyStyles();
 
         // --- GITHUB ---
         async function ghRequest(method, body = null) {
@@ -268,8 +258,7 @@
                 if (!res.ok) throw new Error(res.status);
                 return await res.json();
             } catch (e) {
-                alert('Conexão GitHub falhou: ' + e.message);
-                return null;
+                alert('Erro GitHub: ' + e.message); return null;
             }
         }
 
@@ -282,7 +271,7 @@
                 fileSha = data.sha;
                 db = JSON.parse(fromBase64(data.content));
                 if(!db.sales) db.sales = [];
-                // Migração de dados antigos se necessário
+                // Migration
                 db.products = db.products.map(p => ({...p, bulkMin: p.bulkMin||0, bulkPrice: p.bulkPrice||0 }));
                 renderAll();
             }
@@ -295,7 +284,7 @@
             if(res) fileSha = res.content.sha;
         }
 
-        // --- UI GERAL ---
+        // --- UI ---
         function nav(id) {
             document.querySelectorAll('.panel, .pdv-container').forEach(el => el.style.display = 'none');
             const t = document.getElementById(id);
@@ -305,7 +294,6 @@
         }
 
         function openConfig() { 
-            // Preencher campos
             document.getElementById('gh-user').value = config.user || '';
             document.getElementById('gh-repo').value = config.repo || '';
             document.getElementById('gh-token').value = config.token || '';
@@ -313,7 +301,8 @@
             document.getElementById('cfg-print-font').value = config.printFont;
             document.getElementById('cfg-pix-key').value = config.pixKey || '';
             document.getElementById('cfg-pay-methods').value = config.payMethods;
-            
+            document.getElementById('cfg-header').value = config.headerText;
+            document.getElementById('cfg-footer').value = config.footerText;
             document.getElementById('config-modal').style.display = 'flex'; 
         }
 
@@ -325,37 +314,28 @@
                 printWidth: document.getElementById('cfg-print-width').value.trim() || '48mm',
                 printFont: document.getElementById('cfg-print-font').value.trim() || '11px',
                 pixKey: document.getElementById('cfg-pix-key').value.trim(),
-                payMethods: document.getElementById('cfg-pay-methods').value.trim()
+                payMethods: document.getElementById('cfg-pay-methods').value.trim(),
+                headerText: document.getElementById('cfg-header').value,
+                footerText: document.getElementById('cfg-footer').value
             };
-            
-            // Atualiza CSS instantaneamente
-            document.documentElement.style.setProperty('--print-width', config.printWidth);
-            document.documentElement.style.setProperty('--print-font', config.printFont);
-
-            localStorage.setItem('nbv_config_v4', JSON.stringify(config));
+            applyStyles();
+            localStorage.setItem('nbv_config_v5', JSON.stringify(config));
             document.getElementById('config-modal').style.display = 'none';
             loadData();
         }
 
-        // --- PRODUTOS & CLIENTES ---
+        // --- LOGIC ---
         function addProduct() {
             const name = document.getElementById('p-name').value;
             const price = parseFloat(document.getElementById('p-price').value);
             if(name && price) {
                 db.products.push({
-                    id: Date.now(), 
-                    name, 
-                    code: document.getElementById('p-code').value, 
-                    price,
+                    id: Date.now(), name, code: document.getElementById('p-code').value, price,
                     bulkMin: parseInt(document.getElementById('p-bulk-min').value)||0,
                     bulkPrice: parseFloat(document.getElementById('p-bulk-price').value)||0
                 });
                 saveData(); renderAll();
                 document.getElementById('p-name').value = '';
-                document.getElementById('p-code').value = '';
-                document.getElementById('p-price').value = '';
-                document.getElementById('p-bulk-min').value = '';
-                document.getElementById('p-bulk-price').value = '';
             }
         }
 
@@ -363,8 +343,7 @@
             const prefix = isQuick ? 'qc' : 'c';
             const name = document.getElementById(prefix+'-name').value;
             const phone = document.getElementById(prefix+'-phone').value;
-            const addr = document.getElementById(prefix+'-addr').value; // Novo Campo
-            
+            const addr = document.getElementById(prefix+'-addr').value;
             if(name) {
                 const newClient = {id: Date.now(), name, phone, addr};
                 db.clients.push(newClient);
@@ -375,8 +354,6 @@
                     toggleQuickClient();
                 } else renderAll();
                 document.getElementById(prefix+'-name').value = '';
-                document.getElementById(prefix+'-phone').value = '';
-                document.getElementById(prefix+'-addr').value = '';
             }
         }
 
@@ -389,25 +366,23 @@
             const term = document.getElementById('search').value.toLowerCase();
             const grid = document.getElementById('grid');
             grid.innerHTML = '';
-            
             db.products.forEach(p => {
                 if(p.name.toLowerCase().includes(term) || (p.code && p.code.includes(term))) {
                     const hasBulk = p.bulkMin > 0;
                     const d = document.createElement('div');
                     d.className = 'card';
-                    d.innerHTML = `${hasBulk ? `<span class="badge-bulk">Atacado >${p.bulkMin}</span>` : ''}<b>${p.name}</b><br>R$ ${p.price.toFixed(2)}`;
+                    d.innerHTML = `${hasBulk ? `<span class="badge-bulk">>${p.bulkMin}</span>` : ''}<b>${p.name}</b><br>R$ ${p.price.toFixed(2)}`;
                     d.onclick = () => addToCart(p);
                     grid.appendChild(d);
                 }
             });
-
             document.getElementById('p-list').innerHTML = db.products.map(p => `<div>${p.name} <button onclick="del('products',${p.id})">x</button></div>`).join('');
-            document.getElementById('c-list').innerHTML = db.clients.map(c => `<div>${c.name} - ${c.addr || ''}</div>`).join('');
+            document.getElementById('c-list').innerHTML = db.clients.map(c => `<div>${c.name}</div>`).join('');
         }
 
         function del(type, id) { if(confirm('Apagar?')) { db[type] = db[type].filter(x => x.id !== id); saveData(); renderAll(); } }
 
-        // --- CARRINHO ---
+        // --- CART ---
         function addToCart(p) {
             const ex = cart.find(x => x.id === p.id);
             if(ex) updateQty(cart.indexOf(ex), ex.qty + 1);
@@ -418,44 +393,42 @@
             newQty = parseInt(newQty);
             if(newQty < 1) return;
             const item = cart[idx];
-            const originalProd = db.products.find(p => p.id === item.id);
+            const original = db.products.find(p => p.id === item.id);
             item.qty = newQty;
-            
-            if(originalProd && originalProd.bulkMin > 0 && newQty >= originalProd.bulkMin) item.currentPrice = originalProd.bulkPrice;
-            else item.currentPrice = originalProd ? originalProd.price : item.price;
-            
+            if(original && original.bulkMin > 0 && newQty >= original.bulkMin) item.currentPrice = original.bulkPrice;
+            else item.currentPrice = original ? original.price : item.price;
             renderCart();
         }
 
-        function updatePriceManual(idx, newPrice) { cart[idx].currentPrice = parseFloat(newPrice); renderCart(); }
-
         function renderCart() {
-            const list = document.getElementById('cart-list');
-            list.innerHTML = '';
+            const list = document.getElementById('cart-list'); list.innerHTML = '';
             let total = 0;
             cart.forEach((i, idx) => {
                 total += i.qty * i.currentPrice;
-                const original = db.products.find(p => p.id === i.id);
-                const isBulk = original && original.bulkMin > 0 && i.qty >= original.bulkMin;
+                const orig = db.products.find(p => p.id === i.id);
+                const isBulk = orig && orig.bulkMin > 0 && i.qty >= orig.bulkMin;
                 list.innerHTML += `<div class="cart-item">
-                        <div style="flex:2"><b>${i.name}</b>${isBulk ? '<br><small style="color:var(--accent)">Promo</small>' : ''}</div>
-                        <div style="flex:1"><input type="number" value="${i.qty}" style="width:50px" onchange="updateQty(${idx}, this.value)"> x <input type="number" value="${i.currentPrice.toFixed(2)}" style="width:60px" step="0.01" onchange="updatePriceManual(${idx}, this.value)"></div>
-                        <div style="flex:1;text-align:right">R$ ${(i.qty*i.currentPrice).toFixed(2)} <span onclick="cart.splice(${idx},1);renderCart()" style="color:red;cursor:pointer">x</span></div>
-                    </div>`;
+                    <div style="flex:2"><b>${i.name}</b>${isBulk ? ' <small style="color:orange">*</small>' : ''}</div>
+                    <div style="flex:1"><input type="number" value="${i.qty}" style="width:40px" onchange="updateQty(${idx},this.value)"></div>
+                    <div style="flex:1;text-align:right">R$ ${(i.qty*i.currentPrice).toFixed(2)} <span onclick="cart.splice(${idx},1);renderCart()" style="color:red;cursor:pointer">x</span></div>
+                </div>`;
             });
             document.getElementById('total').innerText = total.toFixed(2);
-            document.getElementById('checkout-total').innerText = total.toFixed(2);
         }
 
-        // --- CHECKOUT & PIX ---
+        // --- CHECKOUT ---
+        let finalTotal = 0;
+
         function openCheckout() {
             if(!cart.length) return alert('Carrinho vazio');
             document.getElementById('checkout-modal').style.display = 'flex';
             renderClientSelect();
             document.getElementById('payment-list').innerHTML = '';
-            addPaymentRow();
+            document.getElementById('disc-val').value = 0;
             document.getElementById('gallery-link').value = '';
             document.getElementById('pix-display').style.display = 'none';
+            calcTotal();
+            addPaymentRow(); // Auto-add first row
         }
         function closeCheckout() { document.getElementById('checkout-modal').style.display = 'none'; }
         
@@ -465,124 +438,103 @@
             db.clients.forEach(c => sel.innerHTML += `<option value="${c.id}">${c.name}</option>`);
         }
 
+        function calcTotal() {
+            const sub = parseFloat(document.getElementById('total').innerText);
+            const dVal = parseFloat(document.getElementById('disc-val').value) || 0;
+            const dType = document.getElementById('disc-type').value;
+            let discount = (dType === '%') ? sub * (dVal/100) : dVal;
+            finalTotal = Math.max(0, sub - discount);
+            document.getElementById('checkout-final').innerText = finalTotal.toFixed(2);
+            return finalTotal;
+        }
+
         function addPaymentRow() {
-            const methods = config.payMethods.split(',');
-            const options = methods.map(m => `<option>${m.trim()}</option>`).join('');
-            
+            // Calc remaining
+            let currentPaid = 0;
+            document.querySelectorAll('.pay-amount').forEach(el => currentPaid += parseFloat(el.value)||0);
+            const remaining = Math.max(0, finalTotal - currentPaid);
+
             const div = document.createElement('div');
             div.className = 'payment-row';
-            div.innerHTML = `<select class="pay-method" onchange="checkPix(this)">${options}</select><input type="number" class="pay-amount" step="0.01" placeholder="Valor" onchange="updatePixValue()"><button onclick="this.parentElement.remove(); document.getElementById('pix-display').style.display='none'" style="background:#c0392b;color:white;border:none;">x</button>`;
+            const opts = config.payMethods.split(',').map(m => `<option>${m.trim()}</option>`).join('');
+            
+            div.innerHTML = `
+                <select class="pay-method" onchange="checkPixRow(this)">${opts}</select>
+                <input type="number" class="pay-amount" value="${remaining.toFixed(2)}" step="0.01" onchange="updatePixDisplay()">
+                <label class="pix-check-label" style="display:none">
+                    <input type="checkbox" class="pix-print"> 🖨️ QR
+                </label>
+                <button onclick="this.parentElement.remove();updatePixDisplay()" style="background:#c0392b;color:white;border:none;">x</button>
+            `;
             document.getElementById('payment-list').appendChild(div);
-            
-            // Auto preencher valor restante
-            const total = parseFloat(document.getElementById('total').innerText);
-            let current = 0;
-            document.querySelectorAll('.pay-amount').forEach(el => current += parseFloat(el.value)||0);
-            const remaining = total - current;
-            if(remaining > 0) {
-                div.querySelector('.pay-amount').value = remaining.toFixed(2);
-            }
-            
-            checkPix(div.querySelector('.pay-method'));
+            checkPixRow(div.querySelector('.pay-method'));
         }
 
-        // --- GERADOR PIX (EMV/BR Code) ---
-        function checkPix(selectEl) {
-            const val = selectEl.value.toLowerCase();
-            const row = selectEl.parentElement;
-            const amount = row.querySelector('.pay-amount').value;
+        function checkPixRow(sel) {
+            const isPix = sel.value.toLowerCase().includes('pix');
+            const row = sel.parentElement;
+            row.querySelector('.pix-check-label').style.display = isPix ? 'flex' : 'none';
+            updatePixDisplay();
+        }
+
+        function updatePixDisplay() {
+            // Show Screen QR for first Pix row
+            const pixRow = Array.from(document.querySelectorAll('.payment-row')).find(r => r.querySelector('.pay-method').value.toLowerCase().includes('pix'));
+            const display = document.getElementById('pix-display');
             
-            if(val.includes('pix') && config.pixKey) {
-                generatePix(amount);
+            if(pixRow && config.pixKey) {
+                const amt = pixRow.querySelector('.pay-amount').value;
+                const payload = createPixPayload(config.pixKey, "Studio NBV", "Boa Ventura", amt, "P"+Date.now());
+                display.style.display = 'block';
+                display.setAttribute('data-code', payload);
+                const qrDiv = document.getElementById('pix-qrcode-checkout');
+                qrDiv.innerHTML = '';
+                new QRCode(qrDiv, { text: payload, width: 100, height: 100 });
+            } else {
+                display.style.display = 'none';
             }
         }
         
-        function updatePixValue() {
-             // Se houver um Pix selecionado, atualiza o QR
-             const rows = document.querySelectorAll('.payment-row');
-             rows.forEach(r => {
-                 if(r.querySelector('.pay-method').value.toLowerCase().includes('pix')) {
-                     generatePix(r.querySelector('.pay-amount').value);
-                 }
-             });
-        }
+        function copyPix() { navigator.clipboard.writeText(document.getElementById('pix-display').getAttribute('data-code')); alert('Copiado!'); }
 
-        function generatePix(amount) {
-            if(!config.pixKey) return;
-            const payload = createPixPayload(config.pixKey, "Studio NBV", "Boa Ventura", amount, "P"+Date.now());
-            
-            document.getElementById('pix-display').style.display = 'block';
-            document.getElementById('pix-code-text').innerText = payload;
-            
-            const div = document.getElementById('pix-qrcode-checkout');
-            div.innerHTML = '';
-            new QRCode(div, { text: payload, width: 128, height: 128 });
-        }
-        
-        function copyPix() {
-            navigator.clipboard.writeText(document.getElementById('pix-code-text').innerText);
-            alert('Código Pix copiado!');
-        }
-
-        // Função Técnica Pix (CRC16 + TLV)
-        function createPixPayload(key, name, city, amount, txid) {
-            function format(id, val) { 
-                const len = val.length.toString().padStart(2, '0');
-                return id + len + val; 
-            }
-            
-            // Normalizar
-            name = name.substring(0,25); 
-            city = city.substring(0,15);
-            amount = parseFloat(amount).toFixed(2);
-            
-            let p = "00020126" + (14 + key.length + 4) + "0014BR.GOV.BCB.PIX01" + (key.length).toString().padStart(2,'0') + key;
-            p += "52040000"; // Merchant Cat
-            p += "5303986"; // BRL
-            if(amount > 0) p += format("54", amount);
-            p += "5802BR";
-            p += format("59", name);
-            p += format("60", city);
-            p += format("62", txid.length < 1 ? "***" : txid); // ID Transaction
-            p += "6304"; // CRC Place holder
-
-            // Calcular CRC16
-            function crc16(str) {
-                let crc = 0xFFFF;
-                for (let i = 0; i < str.length; i++) {
-                    crc ^= str.charCodeAt(i) << 8;
-                    for (let j = 0; j < 8; j++) {
-                        if ((crc & 0x8000) !== 0) crc = (crc << 1) ^ 0x1021;
-                        else crc = crc << 1;
-                    }
-                }
-                return (crc & 0xFFFF).toString(16).toUpperCase().padStart(4, '0');
-            }
-            
-            return p + crc16(p);
-        }
-
-        // --- FINALIZAR ---
+        // --- FINISH ---
         function finishOrder() {
             const payRows = document.querySelectorAll('.payment-row');
             let payments = [];
+            let pixPrintData = null; // Store payload if needing to print
+
             payRows.forEach(r => {
+                const method = r.querySelector('.pay-method').value;
                 const val = parseFloat(r.querySelector('.pay-amount').value) || 0;
-                if(val > 0) payments.push({ method: r.querySelector('.pay-method').value, val });
+                const printQr = r.querySelector('.pix-print').checked;
+                
+                if(val > 0) {
+                    payments.push({ method, val });
+                    // If marked to print, generate payload
+                    if(method.toLowerCase().includes('pix') && printQr && config.pixKey) {
+                        pixPrintData = {
+                            payload: createPixPayload(config.pixKey, "Studio NBV", "Boa Ventura", val, "P"+Date.now()),
+                            val: val
+                        };
+                    }
+                }
             });
 
-            const clientSelect = document.getElementById('checkout-client');
-            const clientObj = db.clients.find(c => c.id == clientSelect.value);
-            
+            const client = db.clients.find(c => c.id == document.getElementById('checkout-client').value);
             const sale = {
                 id: Date.now(),
                 date: new Date().toLocaleString('pt-BR'),
-                client: clientObj ? clientObj.name : 'Consumidor Final',
-                addr: clientObj ? clientObj.addr : '',
+                client: client ? client.name : 'Consumidor Final',
+                addr: client ? client.addr : '',
                 items: cart.map(i => ({...i, price: i.currentPrice})),
-                total: parseFloat(document.getElementById('total').innerText),
+                subtotal: parseFloat(document.getElementById('total').innerText),
+                discount: (parseFloat(document.getElementById('total').innerText) - finalTotal),
+                total: finalTotal,
                 payments: payments,
-                link: document.getElementById('gallery-link').value
+                link: document.getElementById('gallery-link').value,
+                pixPrint: pixPrintData, // Save QR data for history reprint
+                header: config.headerText,
+                footer: config.footerText
             };
 
             db.sales.push(sale);
@@ -592,13 +544,35 @@
         }
 
         function printReceipt(sale) {
+            // Texts
+            document.getElementById('rec-header').innerText = sale.header || config.headerText;
+            document.getElementById('rec-footer').innerText = sale.footer || config.footerText;
+            
+            // Meta
             document.getElementById('rec-meta').innerHTML = `Data: ${sale.date}<br>Cliente: ${sale.client}`;
             document.getElementById('rec-addr').innerText = sale.addr ? `End: ${sale.addr}` : '';
             
+            // Items
             document.getElementById('rec-items').innerHTML = sale.items.map(i => `<tr><td>${i.qty}x ${i.name}</td><td align="right">R$ ${(i.qty*i.price).toFixed(2)}</td></tr>`).join('');
+            
+            // Totals
+            document.getElementById('rec-sub').innerText = sale.subtotal.toFixed(2);
+            document.getElementById('rec-disc').innerText = sale.discount.toFixed(2);
             document.getElementById('rec-total-val').innerText = sale.total.toFixed(2);
             document.getElementById('rec-payments').innerHTML = sale.payments.map(p => `<div>${p.method}: R$ ${p.val.toFixed(2)}</div>`).join('');
             
+            // Pix QR Printed
+            const recPix = document.getElementById('rec-pix-area');
+            if(sale.pixPrint) {
+                recPix.style.display = 'block';
+                document.getElementById('rec-qrcode-pix').innerHTML = '';
+                new QRCode(document.getElementById('rec-qrcode-pix'), { text: sale.pixPrint.payload, width: 90, height: 90 });
+                document.getElementById('rec-pix-val').innerText = `Valor: R$ ${sale.pixPrint.val.toFixed(2)}`;
+            } else {
+                recPix.style.display = 'none';
+            }
+
+            // Gallery QR
             const qrC = document.getElementById('qrcode'); qrC.innerHTML = '';
             if(sale.link) {
                 document.getElementById('qr-area').style.display = 'block';
@@ -613,6 +587,21 @@
             list.innerHTML = [...db.sales].sort((a,b)=>b.id-a.id).map(s => 
                 `<div class="history-item"><div><strong>${s.date}</strong> - ${s.client}<br>R$ ${s.total.toFixed(2)}</div><button class="btn" onclick='printReceipt(${JSON.stringify(s)})'>🖨️</button></div>`
             ).join('');
+        }
+
+        // PIX Payload Generator
+        function createPixPayload(key, name, city, amount, txid) {
+            function f(id, v) { return id + v.length.toString().padStart(2,'0') + v; }
+            let p = "00020126" + (14+key.length+4) + "0014BR.GOV.BCB.PIX01" + (key.length).toString().padStart(2,'0') + key + "520400005303986";
+            if(amount > 0) p += f("54", parseFloat(amount).toFixed(2));
+            p += "5802BR" + f("59",name.substring(0,25)) + f("60",city.substring(0,15)) + f("62",txid) + "6304";
+            
+            let crc = 0xFFFF;
+            for(let i=0; i<p.length; i++) {
+                crc ^= p.charCodeAt(i) << 8;
+                for(let j=0; j<8; j++) crc = (crc & 0x8000) ? (crc << 1) ^ 0x1021 : crc << 1;
+            }
+            return p + (crc & 0xFFFF).toString(16).toUpperCase().padStart(4,'0');
         }
 
         if(config.token) loadData(); else openConfig();
