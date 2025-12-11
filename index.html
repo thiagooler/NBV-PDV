@@ -3,17 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Studio NBV - PDV Final</title>
+    <title>Studio NBV - PDV 10.0 (Prático)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         :root { 
             --primary: #2c3e50; --accent: #e67e22; --success: #27ae60; --danger: #c0392b; 
-            /* Padrões iniciais */
             --print-width: 48mm; --print-font: 12px;
         }
         body { font-family: 'Segoe UI', sans-serif; margin: 0; background: #f4f4f4; display: flex; height: 100vh; overflow: hidden; }
         
-        /* --- LAYOUT --- */
+        /* LAYOUT */
         #sidebar { width: 80px; background: var(--primary); display: flex; flex-direction: column; align-items: center; padding-top: 20px; color: white; }
         .nav-btn { background: none; border: none; color: white; font-size: 24px; margin-bottom: 20px; cursor: pointer; transition: 0.3s; opacity: 0.7; }
         .nav-btn:hover, .nav-btn.active { opacity: 1; transform: scale(1.1); }
@@ -35,13 +34,12 @@
         
         /* Carrinho */
         .cart-header { padding: 20px; background: var(--primary); color: white; text-align: center; }
-        .cart-header h2 { margin: 0; font-size: 1.5rem; text-transform: uppercase; letter-spacing: 1px; }
         .cart-list { flex: 1; overflow-y: auto; padding: 10px; }
         .cart-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #eee; font-size: 14px; }
         .cart-footer { padding: 20px; background: #f8f9fa; border-top: 1px solid #ddd; }
         .btn-checkout { width: 100%; padding: 15px; background: var(--success); color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; }
 
-        /* Painéis e Forms */
+        /* Painéis */
         .panel { padding: 30px; width: 100%; overflow-y: auto; display: none; }
         .form-group { margin-bottom: 15px; }
         .form-group label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 12px; }
@@ -49,16 +47,15 @@
         .row-inputs { display: flex; gap: 10px; }
         .btn { padding: 10px 20px; background: var(--primary); color: white; border: none; border-radius: 5px; cursor: pointer; }
         
-        /* Modais */
-        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); justify-content: center; align-items: center; z-index: 1000; }
-        .modal-content { background: white; padding: 25px; border-radius: 8px; width: 500px; max-width: 95%; max-height: 90vh; overflow-y: auto; }
+        .modal { display: none; position: fixed; top: 0; left: 10%; width: 80%; height: 100%; background: rgba(0,0,0,0.6); justify-content: center; align-items: center; z-index: 1000; }
+        .modal-content { background: white; padding: 25px; border-radius: 8px; width: 500px; max-width: 95%; max-height: 90vh; overflow-y: auto; margin: 5% auto; }
         
         .payment-row { display: flex; gap: 5px; margin-bottom: 5px; align-items: center; }
         .payment-row select { flex: 2; }
         .payment-row input { flex: 1; }
         .pix-check-label { font-size: 10px; display: flex; flex-direction: column; align-items: center; line-height: 1; cursor: pointer; }
 
-        /* --- IMPRESSÃO --- */
+        /* IMPRESSÃO (ESTILO CUPOM) */
         @media print {
             body * { visibility: hidden; }
             #receipt, #receipt * { visibility: visible; }
@@ -73,15 +70,9 @@
             .rec-header, .rec-footer { text-align: center; white-space: pre-wrap; margin-bottom: 10px; }
             .rec-total { font-size: calc(var(--print-font) + 4px); text-align: right; margin-top: 5px; }
             
-            /* QR Code FULL WIDTH NO PAPEL */
-            #rec-qrcode-pix img, #qrcode img { 
-                margin: 5px auto; 
-                display: block; 
-                width: 100% !important; 
-                height: auto !important; 
-                max-width: var(--print-width);
-                image-rendering: pixelated; 
-            }
+            /* Galeria QR */
+            #qrcode img { margin: 5px auto; display: block; width: 100%; max-width: 100px; }
+            
             @page { size: 58mm auto; margin: 0; }
         }
     </style>
@@ -105,7 +96,7 @@
                 <div id="grid" class="grid"></div>
             </div>
             <div class="cart-area">
-                <div class="cart-header"><h2>Carrinho</h2></div>
+                <div class="cart-header"><h2>Caixa NBV</h2></div>
                 <div id="cart-list" class="cart-list"></div>
                 <div class="cart-footer">
                     <h2 style="text-align:right; margin:0 0 10px 0">R$ <span id="total">0.00</span></h2>
@@ -232,10 +223,11 @@
         <div class="rec-total">TOTAL: R$ <span id="rec-total-val"></span></div>
         <div id="rec-payments" style="text-align:right; font-size:10px;"></div>
         
-        <div id="rec-pix-area" style="display:none; text-align:center; margin-top:10px; border:1px dashed #000; padding:5px;">
-            <div style="font-size:12px; font-weight:bold;">PAGAMENTO PIX</div>
-            <div id="rec-qrcode-pix" style="width:100%; display:flex; justify-content:center; padding: 5px 0;"></div>
-            <div style="font-size:10px; font-weight:bold;" id="rec-pix-val"></div>
+        <div id="rec-pix-area" style="display:none; margin-top:10px; border:2px solid #000; padding:5px; text-align:center;">
+            <div style="font-size:14px; font-weight:bold; border-bottom:1px solid #000; margin-bottom:5px;">DADOS PIX</div>
+            <div style="font-size:10px;">Chave para Pagamento:</div>
+            <div style="font-size:16px; font-weight:bold; margin: 5px 0;" id="rec-pix-key"></div>
+            <div style="font-size:12px;" id="rec-pix-amount"></div>
         </div>
 
         <div id="qr-area" style="text-align:center; margin-top:10px; display:none;">
@@ -245,10 +237,10 @@
     </div>
 
     <script>
-        // --- ESTRUTURA ---
+        // --- CORE ---
         let db = { 
             products: [], clients: [], sales: [], 
-            settings: { printWidth: '48mm', printFont: '12px', pixKey: '', payMethods: 'Pix,Dinheiro,Cartão', headerText: 'STUDIO NBV\nBoa Ventura de São Roque', footerText: 'Obrigado!' } 
+            settings: { printWidth: '48mm', printFont: '12px', pixKey: '', payMethods: 'Pix,Dinheiro,Cartão', headerText: 'STUDIO NBV', footerText: 'Obrigado!' } 
         };
         let cart = [];
         let auth = JSON.parse(localStorage.getItem('nbv_auth')) || { user: '', repo: '', token: '' };
@@ -300,7 +292,6 @@
             if(res) fileSha = res.content.sha;
         }
 
-        // --- UI ---
         function nav(id) {
             document.querySelectorAll('.panel, .pdv-container').forEach(el => el.style.display = 'none');
             const t = document.getElementById(id);
@@ -343,7 +334,6 @@
             saveData(); loadData();
         }
 
-        // --- LOGIC ---
         function addProduct() {
             const name = document.getElementById('p-name').value;
             const price = parseFloat(document.getElementById('p-price').value);
@@ -459,7 +449,7 @@
             const div = document.createElement('div');
             div.className = 'payment-row';
             const opts = db.settings.payMethods.split(',').map(m => `<option>${m.trim()}</option>`).join('');
-            div.innerHTML = `<select class="pay-method" onchange="checkPixRow(this)">${opts}</select><input type="number" class="pay-amount" value="${remaining.toFixed(2)}" step="0.01" onchange="updatePixDisplay()"><label class="pix-check-label" style="display:none"><input type="checkbox" class="pix-print"> 🖨️ QR</label><button onclick="this.parentElement.remove();updatePixDisplay()" style="background:#c0392b;color:white;border:none;">x</button>`;
+            div.innerHTML = `<select class="pay-method" onchange="checkPixRow(this)">${opts}</select><input type="number" class="pay-amount" value="${remaining.toFixed(2)}" step="0.01" onchange="updatePixDisplay()"><label class="pix-check-label" style="display:none"><input type="checkbox" class="pix-print"> 🖨️ Key</label><button onclick="this.parentElement.remove();updatePixDisplay()" style="background:#c0392b;color:white;border:none;">x</button>`;
             document.getElementById('payment-list').appendChild(div);
             checkPixRow(div.querySelector('.pay-method'));
         }
@@ -468,14 +458,15 @@
             sel.parentElement.querySelector('.pix-check-label').style.display = isPix ? 'flex' : 'none';
             updatePixDisplay();
         }
+        
+        // QR CODE NA TELA (Mantido pois funciona bem no balcão)
         function updatePixDisplay() {
             const pixRow = Array.from(document.querySelectorAll('.payment-row')).find(r => r.querySelector('.pay-method').value.toLowerCase().includes('pix'));
             const display = document.getElementById('pix-display');
             const key = db.settings.pixKey;
             if(pixRow && key) {
                 const amt = pixRow.querySelector('.pay-amount').value;
-                const txid = "NBV" + Date.now().toString().slice(-10);
-                const payload = createPixPayload(key, "Studio NBV", "Boa Ventura", amt, txid);
+                const payload = createPixPayload(key, "Studio NBV", "Boa Ventura", amt, "NBV"+Date.now());
                 display.style.display = 'block';
                 display.setAttribute('data-code', payload);
                 const qrDiv = document.getElementById('pix-qrcode-checkout'); qrDiv.innerHTML = '';
@@ -490,13 +481,13 @@
             payRows.forEach(r => {
                 const method = r.querySelector('.pay-method').value;
                 const val = parseFloat(r.querySelector('.pay-amount').value) || 0;
-                const printQr = r.querySelector('.pix-print').checked;
+                const printKey = r.querySelector('.pix-print').checked;
                 const key = db.settings.pixKey;
                 if(val > 0) {
                     payments.push({ method, val });
-                    if(method.toLowerCase().includes('pix') && printQr && key) {
-                        const txid = "NBV" + Date.now().toString().slice(-10);
-                        pixPrintData = { payload: createPixPayload(key, "Studio NBV", "Boa Ventura", val, txid), val: val };
+                    // AGORA: Se marcado imprimir, salvamos apenas a chave e o valor em texto
+                    if(method.toLowerCase().includes('pix') && printKey && key) {
+                        pixPrintData = { key: key, val: val };
                     }
                 }
             });
@@ -533,11 +524,9 @@
             const recPix = document.getElementById('rec-pix-area');
             if(sale.pixPrint) {
                 recPix.style.display = 'block';
-                document.getElementById('rec-qrcode-pix').innerHTML = '';
-                new QRCode(document.getElementById('rec-qrcode-pix'), { 
-                    text: sale.pixPrint.payload, width: 250, height: 250, correctLevel: QRCode.CorrectLevel.L 
-                });
-                document.getElementById('rec-pix-val').innerText = `Valor: R$ ${sale.pixPrint.val.toFixed(2)}`;
+                // IMPRESSÃO EM TEXTO PURO DA CHAVE
+                document.getElementById('rec-pix-key').innerText = sale.pixPrint.key;
+                document.getElementById('rec-pix-amount').innerText = `Valor a Pagar: R$ ${sale.pixPrint.val.toFixed(2)}`;
             } else { recPix.style.display = 'none'; }
 
             const qrC = document.getElementById('qrcode'); qrC.innerHTML = '';
@@ -555,29 +544,17 @@
             ).join('');
         }
 
-        // --- PIX VALIDADO ---
+        // Funções de Pix apenas para a TELA do PC (Balcão)
         function normalizeStr(str) { return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9 ]/g, "").toUpperCase(); }
-        
         function createPixPayload(key, name, city, amount, txid) {
-            const cleanKey = key.trim();
-            const cleanName = normalizeStr(name).substring(0,25);
-            const cleanCity = normalizeStr(city).substring(0,15);
-            const cleanTxid = normalizeStr(txid).substring(0,25) || "***";
-            const cleanAmount = parseFloat(amount).toFixed(2);
+            const cleanKey = key.trim(); const cleanName = normalizeStr(name).substring(0,25); const cleanCity = normalizeStr(city).substring(0,15);
+            const cleanTxid = normalizeStr(txid).substring(0,25) || "***"; const cleanAmount = parseFloat(amount).toFixed(2);
             function f(id, v) { return id + v.length.toString().padStart(2,'0') + v; }
-            
             let p = "00020126" + (14+cleanKey.length+4) + "0014BR.GOV.BCB.PIX01" + (cleanKey.length).toString().padStart(2,'0') + cleanKey;
-            p += "520400005303986";
-            if(parseFloat(amount)>0) p += f("54", cleanAmount);
-            p += "5802BR" + f("59",cleanName) + f("60",cleanCity);
-            p += f("62", f("05",cleanTxid)); // FIX FIELD 62/05
-            p += "6304";
-            
+            p += "520400005303986"; if(parseFloat(amount)>0) p += f("54", cleanAmount);
+            p += "5802BR" + f("59",cleanName) + f("60",cleanCity) + f("62", f("05",cleanTxid)) + "6304";
             let crc = 0xFFFF;
-            for(let i=0; i<p.length; i++) {
-                crc ^= p.charCodeAt(i) << 8;
-                for(let j=0; j<8; j++) crc = (crc & 0x8000) ? (crc << 1) ^ 0x1021 : crc << 1;
-            }
+            for(let i=0; i<p.length; i++) { crc ^= p.charCodeAt(i) << 8; for(let j=0; j<8; j++) crc = (crc & 0x8000) ? (crc << 1) ^ 0x1021 : crc << 1; }
             return p + (crc & 0xFFFF).toString(16).toUpperCase().padStart(4,'0');
         }
 
