@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Studio NBV - PDV 10.0 (Prático)</title>
+    <title>Studio NBV - PDV 11.0 (Gestão Clientes)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         :root { 
@@ -32,14 +32,12 @@
         .card:hover { border-color: var(--accent); transform: translateY(-2px); }
         .badge-bulk { position: absolute; top: 5px; right: 5px; background: var(--accent); color: white; font-size: 10px; padding: 2px 5px; border-radius: 4px; }
         
-        /* Carrinho */
         .cart-header { padding: 20px; background: var(--primary); color: white; text-align: center; }
         .cart-list { flex: 1; overflow-y: auto; padding: 10px; }
         .cart-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #eee; font-size: 14px; }
         .cart-footer { padding: 20px; background: #f8f9fa; border-top: 1px solid #ddd; }
         .btn-checkout { width: 100%; padding: 15px; background: var(--success); color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; }
 
-        /* Painéis */
         .panel { padding: 30px; width: 100%; overflow-y: auto; display: none; }
         .form-group { margin-bottom: 15px; }
         .form-group label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 12px; }
@@ -55,7 +53,15 @@
         .payment-row input { flex: 1; }
         .pix-check-label { font-size: 10px; display: flex; flex-direction: column; align-items: center; line-height: 1; cursor: pointer; }
 
-        /* IMPRESSÃO (ESTILO CUPOM) */
+        /* Lista de Clientes Customizada */
+        .client-item { 
+            display: flex; justify-content: space-between; align-items: center; 
+            padding: 10px; border-bottom: 1px solid #eee; background: white; 
+        }
+        .client-item:hover { background: #f9f9f9; }
+        .client-actions button { margin-left: 5px; cursor: pointer; border: none; background: none; font-size: 16px; }
+
+        /* IMPRESSÃO */
         @media print {
             body * { visibility: hidden; }
             #receipt, #receipt * { visibility: visible; }
@@ -69,10 +75,7 @@
             .rec-line { border-bottom: 2px dashed #000; margin: 5px 0; }
             .rec-header, .rec-footer { text-align: center; white-space: pre-wrap; margin-bottom: 10px; }
             .rec-total { font-size: calc(var(--print-font) + 4px); text-align: right; margin-top: 5px; }
-            
-            /* Galeria QR */
             #qrcode img { margin: 5px auto; display: block; width: 100%; max-width: 100px; }
-            
             @page { size: 58mm auto; margin: 0; }
         }
     </style>
@@ -117,17 +120,25 @@
                     <div class="form-group" style="flex:1"><label>Novo Preço:</label><input id="p-bulk-price" type="number" step="0.01"></div>
                 </div>
             </div>
-            <button class="btn" onclick="addProduct()">Salvar</button>
+            <button class="btn" onclick="addProduct()">Salvar Produto</button>
             <hr><div id="p-list"></div>
         </div>
 
         <div id="clients" class="panel">
-            <h2>Clientes</h2>
-            <div class="form-group"><label>Nome</label><input id="c-name"></div>
-            <div class="form-group"><label>WhatsApp</label><input id="c-phone"></div>
-            <div class="form-group"><label>Endereço</label><input id="c-addr"></div>
-            <button class="btn" onclick="addClient(false)">Salvar</button>
-            <hr><div id="c-list"></div>
+            <h2>Gerenciar Clientes</h2>
+            <div style="background: white; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                <div class="form-group"><label>Nome Completo</label><input id="c-name"></div>
+                <div class="form-group"><label>WhatsApp</label><input id="c-phone"></div>
+                <div class="form-group"><label>Endereço</label><input id="c-addr"></div>
+                
+                <div class="row-inputs">
+                    <button id="btn-save-client" class="btn" style="flex:1" onclick="addClient(false)">Salvar Cliente</button>
+                    <button id="btn-cancel-client" class="btn" style="background: #95a5a6; display: none;" onclick="cancelClientEdit()">Cancelar</button>
+                </div>
+            </div>
+            <hr>
+            <h3>Lista de Clientes</h3>
+            <div id="c-list"></div>
         </div>
 
         <div id="history" class="panel">
@@ -141,13 +152,11 @@
         <div class="modal-content">
             <h3>⚙️ Configurações</h3>
             <div style="font-size: 12px; color: #666; margin-bottom: 10px;">Token = Local | Resto = Nuvem</div>
-
             <details style="margin-bottom:10px;"><summary>☁️ Acesso GitHub</summary>
                 <div class="form-group"><input id="gh-user" placeholder="User"></div>
                 <div class="form-group"><input id="gh-repo" placeholder="Repo"></div>
                 <div class="form-group"><input type="password" id="gh-token" placeholder="Token"></div>
             </details>
-
             <details style="margin-bottom:10px;" open><summary>🖨️ Loja & Impressão</summary>
                 <div class="row-inputs">
                     <div class="form-group"><label>Largura (48mm):</label><input id="cfg-print-width"></div>
@@ -156,12 +165,10 @@
                 <div class="form-group"><label>Cabeçalho:</label><textarea id="cfg-header" rows="3"></textarea></div>
                 <div class="form-group"><label>Rodapé:</label><textarea id="cfg-footer" rows="2"></textarea></div>
             </details>
-
             <details style="margin-bottom:10px;"><summary>💳 Financeiro</summary>
                 <div class="form-group"><label>Chave Pix:</label><input id="cfg-pix-key"></div>
                 <div class="form-group"><label>Meios (,):</label><input id="cfg-pay-methods"></div>
             </details>
-
             <button class="btn" style="width:100%" onclick="saveConfig()">Salvar Tudo</button>
         </div>
     </div>
@@ -245,6 +252,7 @@
         let cart = [];
         let auth = JSON.parse(localStorage.getItem('nbv_auth')) || { user: '', repo: '', token: '' };
         let fileSha = '';
+        let editingClientId = null; // Controle de edição
 
         function applySettings() {
             const s = db.settings;
@@ -334,6 +342,7 @@
             saveData(); loadData();
         }
 
+        // --- PRODUTOS ---
         function addProduct() {
             const name = document.getElementById('p-name').value;
             const price = parseFloat(document.getElementById('p-price').value);
@@ -348,24 +357,81 @@
             }
         }
 
+        // --- CLIENTES (ADD & EDIT) ---
         function addClient(isQuick) {
             const prefix = isQuick ? 'qc' : 'c';
             const name = document.getElementById(prefix+'-name').value;
             const phone = document.getElementById(prefix+'-phone').value;
             const addr = document.getElementById(prefix+'-addr').value;
-            if(name) {
+
+            if(!name) return alert('Nome é obrigatório');
+
+            if(editingClientId && !isQuick) {
+                // Modo Edição
+                const client = db.clients.find(c => c.id === editingClientId);
+                if(client) {
+                    client.name = name;
+                    client.phone = phone;
+                    client.addr = addr;
+                }
+                cancelClientEdit();
+            } else {
+                // Modo Novo
                 const newClient = {id: Date.now(), name, phone, addr};
                 db.clients.push(newClient);
+                if(isQuick) {
+                    saveData();
+                    renderClientSelect();
+                    document.getElementById('checkout-client').value = newClient.id;
+                    toggleQuickClient();
+                }
+            }
+            
+            if(!isQuick) {
                 saveData(); 
-                if(isQuick) { renderClientSelect(); document.getElementById('checkout-client').value = newClient.id; toggleQuickClient(); } 
-                else renderAll();
+                renderAll();
                 document.getElementById(prefix+'-name').value = '';
+                document.getElementById(prefix+'-phone').value = '';
+                document.getElementById(prefix+'-addr').value = '';
+            }
+        }
+
+        function startClientEdit(id) {
+            const c = db.clients.find(x => x.id === id);
+            if(!c) return;
+            document.getElementById('c-name').value = c.name;
+            document.getElementById('c-phone').value = c.phone || '';
+            document.getElementById('c-addr').value = c.addr || '';
+            
+            editingClientId = id;
+            document.getElementById('btn-save-client').innerText = "Atualizar Cliente";
+            document.getElementById('btn-cancel-client').style.display = 'block';
+            
+            // Scroll para o topo do form
+            document.getElementById('clients').scrollTop = 0;
+        }
+
+        function cancelClientEdit() {
+            editingClientId = null;
+            document.getElementById('c-name').value = '';
+            document.getElementById('c-phone').value = '';
+            document.getElementById('c-addr').value = '';
+            document.getElementById('btn-save-client').innerText = "Salvar Cliente";
+            document.getElementById('btn-cancel-client').style.display = 'none';
+        }
+
+        function deleteClient(id) {
+            if(confirm('Tem certeza que deseja apagar este cliente?')) {
+                db.clients = db.clients.filter(c => c.id !== id);
+                saveData();
+                renderAll();
             }
         }
 
         function toggleQuickClient() { const f = document.getElementById('quick-client-form'); f.style.display = f.style.display === 'block' ? 'none' : 'block'; }
         
         function renderAll() {
+            // Produtos Grid
             const term = document.getElementById('search').value.toLowerCase();
             const grid = document.getElementById('grid'); grid.innerHTML = '';
             db.products.forEach(p => {
@@ -379,10 +445,25 @@
                 }
             });
             document.getElementById('p-list').innerHTML = db.products.map(p => `<div>${p.name} <button onclick="del('products',${p.id})">x</button></div>`).join('');
-            document.getElementById('c-list').innerHTML = db.clients.map(c => `<div>${c.name}</div>`).join('');
+            
+            // Clientes Lista
+            const clList = document.getElementById('c-list');
+            clList.innerHTML = db.clients.map(c => `
+                <div class="client-item">
+                    <div>
+                        <strong>${c.name}</strong><br>
+                        <small>${c.phone || '-'} | ${c.addr || '-'}</small>
+                    </div>
+                    <div class="client-actions">
+                        <button onclick="startClientEdit(${c.id})" title="Editar">✎</button>
+                        <button onclick="deleteClient(${c.id})" title="Excluir" style="color:red;">🗑️</button>
+                    </div>
+                </div>
+            `).join('');
         }
         function del(type, id) { if(confirm('Apagar?')) { db[type] = db[type].filter(x => x.id !== id); saveData(); renderAll(); } }
 
+        // --- CARRINHO ---
         function addToCart(p) {
             const ex = cart.find(x => x.id === p.id);
             if(ex) updateQty(cart.indexOf(ex), ex.qty + 1);
@@ -458,8 +539,6 @@
             sel.parentElement.querySelector('.pix-check-label').style.display = isPix ? 'flex' : 'none';
             updatePixDisplay();
         }
-        
-        // QR CODE NA TELA (Mantido pois funciona bem no balcão)
         function updatePixDisplay() {
             const pixRow = Array.from(document.querySelectorAll('.payment-row')).find(r => r.querySelector('.pay-method').value.toLowerCase().includes('pix'));
             const display = document.getElementById('pix-display');
@@ -485,7 +564,6 @@
                 const key = db.settings.pixKey;
                 if(val > 0) {
                     payments.push({ method, val });
-                    // AGORA: Se marcado imprimir, salvamos apenas a chave e o valor em texto
                     if(method.toLowerCase().includes('pix') && printKey && key) {
                         pixPrintData = { key: key, val: val };
                     }
@@ -524,7 +602,6 @@
             const recPix = document.getElementById('rec-pix-area');
             if(sale.pixPrint) {
                 recPix.style.display = 'block';
-                // IMPRESSÃO EM TEXTO PURO DA CHAVE
                 document.getElementById('rec-pix-key').innerText = sale.pixPrint.key;
                 document.getElementById('rec-pix-amount').innerText = `Valor a Pagar: R$ ${sale.pixPrint.val.toFixed(2)}`;
             } else { recPix.style.display = 'none'; }
