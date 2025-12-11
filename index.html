@@ -1,256 +1,18 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Studio NBV - PDV 7.0 (HD)</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    <style>
-        :root { 
-            --primary: #2c3e50; --accent: #e67e22; --success: #27ae60; --danger: #c0392b; 
-            /* Padrões iniciais */
-            --print-width: 48mm; --print-font: 12px;
-        }
-        body { font-family: 'Segoe UI', sans-serif; margin: 0; background: #f4f4f4; display: flex; height: 100vh; overflow: hidden; }
-        
-        /* UI Layout */
-        #sidebar { width: 80px; background: var(--primary); display: flex; flex-direction: column; align-items: center; padding-top: 20px; color: white; }
-        .nav-btn { background: none; border: none; color: white; font-size: 24px; margin-bottom: 20px; cursor: pointer; transition: 0.3s; opacity: 0.7; }
-        .nav-btn:hover, .nav-btn.active { opacity: 1; transform: scale(1.1); }
-        .nav-bottom { margin-top: auto; margin-bottom: 20px; }
-        
-        #main-content { flex: 1; display: flex; overflow: hidden; position: relative; }
-        #status-bar { position: absolute; top: 0; left: 0; width: 100%; height: 5px; background: transparent; z-index: 2000; }
-        .loading-line { height: 100%; background: var(--accent); width: 0%; transition: width 0.3s; }
-
-        .pdv-container { display: flex; width: 100%; height: 100%; }
-        .product-area { flex: 2; padding: 20px; overflow-y: auto; border-right: 1px solid #ddd; }
-        .cart-area { flex: 1; background: white; display: flex; flex-direction: column; box-shadow: -2px 0 5px rgba(0,0,0,0.05); }
-
-        .search-bar { width: 100%; padding: 15px; font-size: 16px; border: 2px solid #ddd; border-radius: 8px; margin-bottom: 20px; box-sizing: border-box; }
-        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 15px; }
-        .card { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); cursor: pointer; text-align: center; border: 1px solid transparent; position: relative; }
-        .card:hover { border-color: var(--accent); transform: translateY(-2px); }
-        .badge-bulk { position: absolute; top: 5px; right: 5px; background: var(--accent); color: white; font-size: 10px; padding: 2px 5px; border-radius: 4px; }
-        
-        /* Carrinho Centralizado */
-        .cart-header { padding: 20px; background: var(--primary); color: white; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        .cart-header h2 { margin: 0; font-size: 1.5rem; text-transform: uppercase; letter-spacing: 1px; }
-
-        .cart-list { flex: 1; overflow-y: auto; padding: 10px; }
-        .cart-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #eee; font-size: 14px; }
-        .cart-footer { padding: 20px; background: #f8f9fa; border-top: 1px solid #ddd; }
-        .btn-checkout { width: 100%; padding: 15px; background: var(--success); color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; }
-
-        .panel { padding: 30px; width: 100%; overflow-y: auto; display: none; }
-        .form-group { margin-bottom: 15px; }
-        .form-group label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 12px; }
-        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; font-family: inherit; }
-        .row-inputs { display: flex; gap: 10px; }
-        .btn { padding: 10px 20px; background: var(--primary); color: white; border: none; border-radius: 5px; cursor: pointer; }
-        
-        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); justify-content: center; align-items: center; z-index: 1000; }
-        .modal-content { background: white; padding: 25px; border-radius: 8px; width: 500px; max-width: 95%; max-height: 90vh; overflow-y: auto; }
-        
-        .payment-row { display: flex; gap: 5px; margin-bottom: 5px; align-items: center; }
-        .payment-row select { flex: 2; }
-        .payment-row input { flex: 1; }
-        .pix-check-label { font-size: 10px; display: flex; flex-direction: column; align-items: center; line-height: 1; cursor: pointer; }
-
-        /* IMPRESSÃO OTIMIZADA */
-        @media print {
-            body * { visibility: hidden; }
-            #receipt, #receipt * { visibility: visible; }
-            #receipt { 
-                position: absolute; left: 0; top: 0; 
-                width: var(--print-width); margin: 0; padding: 0;
-                font-family: 'Arial Black', 'Arial', sans-serif; 
-                font-weight: 900; font-size: var(--print-font); 
-                color: #000; line-height: 1.2; display: block !important; 
+// --- ESTRUTURA DE DADOS ---
+        let db = { 
+            products: [], 
+            clients: [], 
+            sales: [],
+            settings: {
+                printWidth: '48mm', printFont: '12px', pixKey: '', payMethods: 'Pix,Dinheiro,Cartão',
+                headerText: 'STUDIO NBV\nBoa Ventura de São Roque', footerText: 'Obrigado pela preferência!'
             }
-            .rec-line { border-bottom: 2px dashed #000; margin: 5px 0; }
-            .rec-header, .rec-footer { text-align: center; white-space: pre-wrap; margin-bottom: 10px; }
-            .rec-total { font-size: calc(var(--print-font) + 4px); text-align: right; margin-top: 5px; }
-            
-            /* QR Code FULL WIDTH */
-            #rec-qrcode-pix img, #qrcode img { 
-                margin: 5px auto; 
-                display: block; 
-                width: 100% !important; /* Força largura total */
-                height: auto !important; 
-                max-width: var(--print-width); /* Respeita o limite do papel */
-                image-rendering: pixelated; /* Ajuda na nitidez */
-            }
-            
-            @page { size: 58mm auto; margin: 0; }
-        }
-    </style>
-</head>
-<body>
-
-    <div id="sidebar">
-        <button class="nav-btn active" onclick="nav('pdv')">🛒</button>
-        <button class="nav-btn" onclick="nav('products')">📦</button>
-        <button class="nav-btn" onclick="nav('clients')">👥</button>
-        <button class="nav-btn" onclick="nav('history')">📜</button>
-        <div class="nav-bottom"><button class="nav-btn" onclick="openConfig()">⚙️</button></div>
-    </div>
-
-    <div id="main-content">
-        <div id="status-bar"><div class="loading-line" id="loader"></div></div>
-
-        <div id="pdv" class="pdv-container">
-            <div class="product-area">
-                <input type="text" id="search" class="search-bar" placeholder="Buscar produto..." onkeyup="renderGrid()">
-                <div id="grid" class="grid"></div>
-            </div>
-            <div class="cart-area">
-                <div class="cart-header"><h2>Carrinho</h2></div>
-                <div id="cart-list" class="cart-list"></div>
-                <div class="cart-footer">
-                    <h2 style="text-align:right; margin:0 0 10px 0">R$ <span id="total">0.00</span></h2>
-                    <button class="btn-checkout" onclick="openCheckout()">FINALIZAR</button>
-                </div>
-            </div>
-        </div>
-
-        <div id="products" class="panel">
-            <h2>Produtos</h2>
-            <div class="form-group"><label>Nome</label><input id="p-name"></div>
-            <div class="form-group"><label>Código</label><input id="p-code"></div>
-            <div class="row-inputs"><div class="form-group" style="flex:1"><label>Preço</label><input id="p-price" type="number" step="0.01"></div></div>
-            <div style="background:#eef2f5; padding:10px; border-radius:5px; margin-bottom:15px; border-left:3px solid var(--accent);">
-                <h4>Atacado (Opcional)</h4>
-                <div class="row-inputs">
-                    <div class="form-group" style="flex:1"><label>Acima de:</label><input id="p-bulk-min" type="number"></div>
-                    <div class="form-group" style="flex:1"><label>Novo Preço:</label><input id="p-bulk-price" type="number" step="0.01"></div>
-                </div>
-            </div>
-            <button class="btn" onclick="addProduct()">Salvar</button>
-            <hr><div id="p-list"></div>
-        </div>
-
-        <div id="clients" class="panel">
-            <h2>Clientes</h2>
-            <div class="form-group"><label>Nome</label><input id="c-name"></div>
-            <div class="form-group"><label>WhatsApp</label><input id="c-phone"></div>
-            <div class="form-group"><label>Endereço</label><input id="c-addr"></div>
-            <button class="btn" onclick="addClient(false)">Salvar</button>
-            <hr><div id="c-list"></div>
-        </div>
-
-        <div id="history" class="panel">
-            <h2>Histórico</h2>
-            <button class="btn" onclick="loadData()">🔄 Atualizar</button>
-            <hr><div id="h-list"></div>
-        </div>
-    </div>
-
-    <div id="config-modal" class="modal">
-        <div class="modal-content">
-            <h3>⚙️ Configurações</h3>
-            <div style="font-size: 12px; color: #666; margin-bottom: 10px;">Token = Local | Resto = Nuvem</div>
-
-            <details style="margin-bottom:10px;"><summary>☁️ Acesso GitHub</summary>
-                <div class="form-group"><input id="gh-user" placeholder="User"></div>
-                <div class="form-group"><input id="gh-repo" placeholder="Repo"></div>
-                <div class="form-group"><input type="password" id="gh-token" placeholder="Token"></div>
-            </details>
-
-            <details style="margin-bottom:10px;" open><summary>🖨️ Loja & Impressão</summary>
-                <div class="row-inputs">
-                    <div class="form-group"><label>Largura (48mm):</label><input id="cfg-print-width"></div>
-                    <div class="form-group"><label>Fonte (12px):</label><input id="cfg-print-font"></div>
-                </div>
-                <div class="form-group"><label>Cabeçalho:</label><textarea id="cfg-header" rows="3"></textarea></div>
-                <div class="form-group"><label>Rodapé:</label><textarea id="cfg-footer" rows="2"></textarea></div>
-            </details>
-
-            <details style="margin-bottom:10px;"><summary>💳 Financeiro</summary>
-                <div class="form-group"><label>Chave Pix:</label><input id="cfg-pix-key"></div>
-                <div class="form-group"><label>Meios (,):</label><input id="cfg-pay-methods"></div>
-            </details>
-
-            <button class="btn" style="width:100%" onclick="saveConfig()">Salvar Tudo</button>
-        </div>
-    </div>
-
-    <div id="checkout-modal" class="modal">
-        <div class="modal-content">
-            <h3>Finalizar Venda</h3>
-            <div class="form-group" style="display:flex; gap:5px; align-items:end;">
-                <div style="flex:1"><label>Cliente:</label><select id="checkout-client"></select></div>
-                <button class="btn" onclick="toggleQuickClient()" title="Novo" style="padding:10px;">+</button>
-            </div>
-            
-            <div id="quick-client-form" style="display:none;background:#eee;padding:10px;margin-bottom:10px;">
-                <div class="form-group"><input id="qc-name" placeholder="Nome"></div>
-                <div class="form-group"><input id="qc-phone" placeholder="Zap"></div>
-                <div class="form-group"><input id="qc-addr" placeholder="Endereço"></div>
-                <button class="btn" onclick="addClient(true)">Cadastrar</button>
-            </div>
-
-            <div style="background:#fff3cd; padding:10px; border-radius:5px; margin-bottom:10px; border:1px solid #ffeeba;">
-                <div class="row-inputs" style="align-items:center;">
-                    <span style="font-weight:bold">Desconto:</span>
-                    <input type="number" id="disc-val" value="0" style="width:70px" onchange="calcTotal()">
-                    <select id="disc-type" style="width:60px" onchange="calcTotal()"><option value="$">R$</option><option value="%">%</option></select>
-                </div>
-            </div>
-
-            <div class="form-group">
-                <label>Total Final: R$ <span id="checkout-final" style="font-size:1.2em;color:var(--success)">0.00</span></label>
-                <div id="payment-list"></div>
-                <button class="btn" style="background:#ddd; color:#000; width:100%; margin-top:5px;" onclick="addPaymentRow()">+ Add Pagamento</button>
-            </div>
-            
-            <div id="pix-display" style="display:none; text-align:center; background:#e8f8f5; padding:10px; border:1px solid #27ae60; margin-top:5px;">
-                <strong>QR Code Pix (Tela)</strong>
-                <div id="pix-qrcode-checkout" style="display:flex; justify-content:center; margin:5px;"></div>
-                <button class="btn" style="font-size:10px" onclick="copyPix()">Copiar Código</button>
-            </div>
-
-            <div class="form-group"><label>Link Galeria (QR Code Cupom):</label><input id="gallery-link"></div>
-            
-            <div style="margin-top:20px; display:flex; gap:10px;">
-                <button class="btn" style="background:#ccc; flex:1" onclick="closeCheckout()">Cancelar</button>
-                <button class="btn-checkout" style="flex:1" onclick="finishOrder()">IMPRIMIR</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="receipt" style="display:none">
-        <div id="rec-header" class="rec-header"></div>
-        <div class="rec-line"></div>
-        <div id="rec-meta"></div>
-        <div id="rec-addr" style="font-size:10px;"></div>
-        <div class="rec-line"></div>
-        <table style="width:100%" id="rec-items"></table>
-        <div class="rec-line"></div>
-        <div style="display:flex; justify-content:space-between"><span>Subtotal:</span><span id="rec-sub"></span></div>
-        <div style="display:flex; justify-content:space-between"><span>Desconto:</span><span id="rec-disc"></span></div>
-        <div class="rec-total">TOTAL: R$ <span id="rec-total-val"></span></div>
-        <div id="rec-payments" style="text-align:right; font-size:10px;"></div>
-        
-        <div id="rec-pix-area" style="display:none; text-align:center; margin-top:10px; border:1px dashed #000; padding:5px;">
-            <div style="font-size:12px; font-weight:bold;">PAGAMENTO PIX</div>
-            <div id="rec-qrcode-pix" style="width:100%; display:flex; justify-content:center; padding: 5px 0;"></div>
-            <div style="font-size:10px; font-weight:bold;" id="rec-pix-val"></div>
-        </div>
-
-        <div id="qr-area" style="text-align:center; margin-top:10px; display:none;">
-            <span>Acesse suas fotos:</span><div id="qrcode"></div>
-        </div>
-        <div id="rec-footer" class="rec-footer" style="font-size:10px; margin-top:10px;"></div>
-    </div>
-
-    <script>
-        // --- ESTRUTURA ---
-        let db = { products: [], clients: [], sales: [], settings: { printWidth: '48mm', printFont: '12px', pixKey: '', payMethods: 'Pix,Dinheiro,Cartão', headerText: 'STUDIO NBV\nBoa Ventura de São Roque', footerText: 'Obrigado!' } };
+        };
         let cart = [];
         let auth = JSON.parse(localStorage.getItem('nbv_auth')) || { user: '', repo: '', token: '' };
         let fileSha = '';
 
+        // --- CORE & SYNC ---
         function applySettings() {
             const s = db.settings;
             document.documentElement.style.setProperty('--print-width', s.printWidth);
@@ -285,6 +47,7 @@
                 db.clients = remoteDb.clients || [];
                 db.sales = remoteDb.sales || [];
                 if(remoteDb.settings) db.settings = remoteDb.settings;
+                // Normalização
                 db.products = db.products.map(p => ({...p, bulkMin: p.bulkMin||0, bulkPrice: p.bulkPrice||0 }));
                 applySettings(); renderAll();
             }
@@ -297,7 +60,7 @@
             if(res) fileSha = res.content.sha;
         }
 
-        // --- UI ---
+        // --- NAVEGAÇÃO ---
         function nav(id) {
             document.querySelectorAll('.panel, .pdv-container').forEach(el => el.style.display = 'none');
             const t = document.getElementById(id);
@@ -337,11 +100,10 @@
             };
             applySettings();
             document.getElementById('config-modal').style.display = 'none';
-            saveData();
-            loadData();
+            saveData(); loadData();
         }
 
-        // --- BUSINESS LOGIC ---
+        // --- LOGICA PRODUTOS/CLIENTES ---
         function addProduct() {
             const name = document.getElementById('p-name').value;
             const price = parseFloat(document.getElementById('p-price').value);
@@ -372,6 +134,7 @@
         }
 
         function toggleQuickClient() { const f = document.getElementById('quick-client-form'); f.style.display = f.style.display === 'block' ? 'none' : 'block'; }
+        
         function renderAll() {
             const term = document.getElementById('search').value.toLowerCase();
             const grid = document.getElementById('grid'); grid.innerHTML = '';
@@ -389,6 +152,8 @@
             document.getElementById('c-list').innerHTML = db.clients.map(c => `<div>${c.name}</div>`).join('');
         }
         function del(type, id) { if(confirm('Apagar?')) { db[type] = db[type].filter(x => x.id !== id); saveData(); renderAll(); } }
+
+        // --- CARRINHO ---
         function addToCart(p) {
             const ex = cart.find(x => x.id === p.id);
             if(ex) updateQty(cart.indexOf(ex), ex.qty + 1);
@@ -433,11 +198,13 @@
             calcTotal(); addPaymentRow(); 
         }
         function closeCheckout() { document.getElementById('checkout-modal').style.display = 'none'; }
+        
         function renderClientSelect() {
             const sel = document.getElementById('checkout-client');
             sel.innerHTML = '<option value="">Consumidor Final</option>';
             db.clients.forEach(c => sel.innerHTML += `<option value="${c.id}">${c.name}</option>`);
         }
+
         function calcTotal() {
             const sub = parseFloat(document.getElementById('total').innerText);
             const dVal = parseFloat(document.getElementById('disc-val').value) || 0;
@@ -447,6 +214,7 @@
             document.getElementById('checkout-final').innerText = finalTotal.toFixed(2);
             return finalTotal;
         }
+
         function addPaymentRow() {
             let currentPaid = 0;
             document.querySelectorAll('.pay-amount').forEach(el => currentPaid += parseFloat(el.value)||0);
@@ -458,22 +226,28 @@
             document.getElementById('payment-list').appendChild(div);
             checkPixRow(div.querySelector('.pay-method'));
         }
+
         function checkPixRow(sel) {
             const isPix = sel.value.toLowerCase().includes('pix');
             sel.parentElement.querySelector('.pix-check-label').style.display = isPix ? 'flex' : 'none';
             updatePixDisplay();
         }
+
         function updatePixDisplay() {
             const pixRow = Array.from(document.querySelectorAll('.payment-row')).find(r => r.querySelector('.pay-method').value.toLowerCase().includes('pix'));
             const display = document.getElementById('pix-display');
             const key = db.settings.pixKey;
+            
             if(pixRow && key) {
                 const amt = pixRow.querySelector('.pay-amount').value;
-                const payload = createPixPayload(key, "Studio NBV", "Boa Ventura", amt, "P"+Date.now());
+                // Gera um ID único para esta transação baseada na hora atual
+                const txid = "NBV" + Date.now().toString().slice(-10);
+                const payload = createPixPayload(key, "Studio NBV", "Boa Ventura", amt, txid);
+                
                 display.style.display = 'block';
                 display.setAttribute('data-code', payload);
                 const qrDiv = document.getElementById('pix-qrcode-checkout'); qrDiv.innerHTML = '';
-                new QRCode(qrDiv, { text: payload, width: 100, height: 100 });
+                new QRCode(qrDiv, { text: payload, width: 120, height: 120 });
             } else { display.style.display = 'none'; }
         }
         function copyPix() { navigator.clipboard.writeText(document.getElementById('pix-display').getAttribute('data-code')); alert('Copiado!'); }
@@ -489,7 +263,8 @@
                 if(val > 0) {
                     payments.push({ method, val });
                     if(method.toLowerCase().includes('pix') && printQr && key) {
-                        pixPrintData = { payload: createPixPayload(key, "Studio NBV", "Boa Ventura", val, "P"+Date.now()), val: val };
+                        const txid = "NBV" + Date.now().toString().slice(-10);
+                        pixPrintData = { payload: createPixPayload(key, "Studio NBV", "Boa Ventura", val, txid), val: val };
                     }
                 }
             });
@@ -527,13 +302,7 @@
             if(sale.pixPrint) {
                 recPix.style.display = 'block';
                 document.getElementById('rec-qrcode-pix').innerHTML = '';
-                // GERAR QR CODE COM TAMANHO MAIOR (250px) PARA FICAR NÍTIDO NO PAPEL
-                new QRCode(document.getElementById('rec-qrcode-pix'), { 
-                    text: sale.pixPrint.payload, 
-                    width: 250, 
-                    height: 250,
-                    correctLevel: QRCode.CorrectLevel.L 
-                });
+                new QRCode(document.getElementById('rec-qrcode-pix'), { text: sale.pixPrint.payload, width: 250, height: 250, correctLevel: QRCode.CorrectLevel.L });
                 document.getElementById('rec-pix-val').innerText = `Valor: R$ ${sale.pixPrint.val.toFixed(2)}`;
             } else { recPix.style.display = 'none'; }
 
@@ -542,7 +311,6 @@
                 document.getElementById('qr-area').style.display = 'block';
                 new QRCode(qrC, { text: sale.link, width: 100, height: 100 });
             } else document.getElementById('qr-area').style.display = 'none';
-            
             setTimeout(() => window.print(), 500);
         }
 
@@ -553,20 +321,44 @@
             ).join('');
         }
 
+        // --- GERAÇÃO PIX VALIDADA PELO BANCO CENTRAL ---
+        function normalizeStr(str) {
+            return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9 ]/g, "").toUpperCase();
+        }
+
         function createPixPayload(key, name, city, amount, txid) {
-            function f(id, v) { return id + v.length.toString().padStart(2,'0') + v; }
-            let p = "00020126" + (14+key.length+4) + "0014BR.GOV.BCB.PIX01" + (key.length).toString().padStart(2,'0') + key + "520400005303986";
-            if(amount > 0) p += f("54", parseFloat(amount).toFixed(2));
-            p += "5802BR" + f("59",name.substring(0,25)) + f("60",city.substring(0,15)) + f("62",txid) + "6304";
+            const cleanKey = key.trim();
+            const cleanName = normalizeStr(name).substring(0, 25);
+            const cleanCity = normalizeStr(city).substring(0, 15);
+            const cleanTxid = normalizeStr(txid).substring(0, 25) || "***";
+            const cleanAmount = parseFloat(amount).toFixed(2);
+
+            function f(id, v) { return id + v.length.toString().padStart(2, '0') + v; }
+
+            // Montagem do Payload (EMV QRCPS MPM)
+            let p = "00020126" + (14 + cleanKey.length + 4) + "0014BR.GOV.BCB.PIX01" + (cleanKey.length).toString().padStart(2, '0') + cleanKey;
+            p += "52040000"; // Merchant Cat Code
+            p += "5303986"; // Moeda BRL
+            if (parseFloat(amount) > 0) p += f("54", cleanAmount); // Valor
+            p += "5802BR"; // País
+            p += f("59", cleanName); // Nome Recebedor
+            p += f("60", cleanCity); // Cidade Recebedor
+            
+            // O ERRO ESTAVA AQUI: O Campo 62 precisa ter o subcampo 05 dentro dele!
+            p += f("62", f("05", cleanTxid));
+
+            p += "6304"; // Placeholder CRC
+
+            // Cálculo CRC16 (Polinômio 0x1021)
             let crc = 0xFFFF;
-            for(let i=0; i<p.length; i++) {
+            for (let i = 0; i < p.length; i++) {
                 crc ^= p.charCodeAt(i) << 8;
-                for(let j=0; j<8; j++) crc = (crc & 0x8000) ? (crc << 1) ^ 0x1021 : crc << 1;
+                for (let j = 0; j < 8; j++) {
+                    if ((crc & 0x8000) !== 0) crc = (crc << 1) ^ 0x1021;
+                    else crc = crc << 1;
+                }
             }
-            return p + (crc & 0xFFFF).toString(16).toUpperCase().padStart(4,'0');
+            return p + (crc & 0xFFFF).toString(16).toUpperCase().padStart(4, '0');
         }
 
         if(auth.token) loadData(); else openConfig();
-    </script>
-</body>
-</html>
