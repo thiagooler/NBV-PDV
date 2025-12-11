@@ -3,10 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Studio NBV - PDV 2.0</title>
+    <title>Studio NBV - PDV 4.0</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
-        :root { --primary: #2c3e50; --accent: #e67e22; --success: #27ae60; --danger: #c0392b; }
+        :root { 
+            --primary: #2c3e50; --accent: #e67e22; --success: #27ae60; --danger: #c0392b; 
+            /* Variáveis de Impressão Dinâmicas (Controladas pelo JS) */
+            --print-width: 48mm; 
+            --print-font: 11px;
+        }
         body { font-family: 'Segoe UI', sans-serif; margin: 0; background: #f4f4f4; display: flex; height: 100vh; overflow: hidden; }
         
         /* Layout */
@@ -19,64 +24,66 @@
         #status-bar { position: absolute; top: 0; left: 0; width: 100%; height: 5px; background: transparent; z-index: 2000; }
         .loading-line { height: 100%; background: var(--accent); width: 0%; transition: width 0.3s; }
 
-        /* PDV */
+        /* PDV & Grids */
         .pdv-container { display: flex; width: 100%; height: 100%; }
         .product-area { flex: 2; padding: 20px; overflow-y: auto; border-right: 1px solid #ddd; }
         .cart-area { flex: 1; background: white; display: flex; flex-direction: column; box-shadow: -2px 0 5px rgba(0,0,0,0.05); }
 
-        /* Componentes */
         .search-bar { width: 100%; padding: 15px; font-size: 16px; border: 2px solid #ddd; border-radius: 8px; margin-bottom: 20px; box-sizing: border-box; }
         .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 15px; }
-        .card { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); cursor: pointer; text-align: center; border: 1px solid transparent; }
+        .card { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); cursor: pointer; text-align: center; border: 1px solid transparent; position: relative; }
         .card:hover { border-color: var(--accent); transform: translateY(-2px); }
+        .badge-bulk { position: absolute; top: 5px; right: 5px; background: var(--accent); color: white; font-size: 10px; padding: 2px 5px; border-radius: 4px; }
         
-        /* Carrinho */
+        /* Cart */
         .cart-list { flex: 1; overflow-y: auto; padding: 10px; }
         .cart-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #eee; font-size: 14px; }
         .cart-footer { padding: 20px; background: #f8f9fa; border-top: 1px solid #ddd; }
         .btn-checkout { width: 100%; padding: 15px; background: var(--success); color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; }
 
-        /* Painéis e Forms */
+        /* Forms */
         .panel { padding: 30px; width: 100%; overflow-y: auto; display: none; }
         .form-group { margin-bottom: 15px; }
         .form-group label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 12px; }
         .form-group input, .form-group select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; }
+        .row-inputs { display: flex; gap: 10px; }
         .btn { padding: 10px 20px; background: var(--primary); color: white; border: none; border-radius: 5px; cursor: pointer; }
         
         /* Modais */
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); justify-content: center; align-items: center; z-index: 1000; }
         .modal-content { background: white; padding: 25px; border-radius: 8px; width: 500px; max-width: 95%; max-height: 90vh; overflow-y: auto; }
         
-        /* Pagamentos Multiplos */
+        /* Checkout Extra */
         .payment-row { display: flex; gap: 5px; margin-bottom: 5px; }
         .payment-row select { flex: 1; }
         .payment-row input { width: 100px; }
-
-        /* Cadastro Rápido de Cliente */
         #quick-client-form { display: none; background: #f0f0f0; padding: 10px; border-radius: 5px; margin-bottom: 10px; border: 1px dashed #999; }
+        
+        /* Pix Area */
+        #pix-display { margin-top: 10px; padding: 10px; background: #e8f8f5; border: 1px solid #27ae60; border-radius: 5px; text-align: center; display: none; }
+        #pix-code-text { font-family: monospace; font-size: 10px; word-break: break-all; background: white; padding: 5px; border: 1px solid #ddd; margin-top: 5px; }
 
-        /* Histórico */
+        /* History */
         .history-item { background: white; padding: 15px; margin-bottom: 10px; border-radius: 5px; border-left: 5px solid var(--accent); box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; }
 
-        /* --- CSS IMPRESSÃO (58mm) --- */
+        /* --- IMPRESSÃO (58mm Ajustável) --- */
         @media print {
             body * { visibility: hidden; }
             #receipt, #receipt * { visibility: visible; }
             #receipt { 
                 position: absolute; left: 0; top: 0; 
-                width: 48mm; /* Margem de segurança para 58mm */
-                margin: 0 auto; padding: 5px; 
-                font-family: 'Arial Black', 'Arial', sans-serif; /* Fonte Grossa */
-                font-weight: 900;
-                font-size: 12px;
-                color: #000;
-                line-height: 1.2;
+                width: var(--print-width); /* Ajustável */
+                margin: 0; padding: 2px;
+                font-family: 'Arial Black', 'Arial', sans-serif; 
+                font-weight: 900; 
+                font-size: var(--print-font); /* Ajustável */
+                color: #000; line-height: 1.2;
                 display: block !important; 
             }
             .rec-line { border-bottom: 2px dashed #000; margin: 5px 0; }
-            .rec-header { text-align: center; font-size: 14px; margin-bottom: 10px; }
-            .rec-total { font-size: 16px; text-align: right; margin-top: 5px; }
-            #qrcode img { margin: 10px auto; display: block; max-width: 100px; }
+            .rec-header { text-align: center; font-size: calc(var(--print-font) + 2px); margin-bottom: 10px; }
+            .rec-total { font-size: calc(var(--print-font) + 4px); text-align: right; margin-top: 5px; }
+            #qrcode img { margin: 10px auto; display: block; max-width: 80px; }
             @page { size: 58mm auto; margin: 0; }
         }
     </style>
@@ -89,7 +96,7 @@
         <button class="nav-btn" onclick="nav('clients')" title="Clientes">👥</button>
         <button class="nav-btn" onclick="nav('history')" title="Histórico">📜</button>
         <div class="nav-bottom">
-            <button class="nav-btn" onclick="openConfig()" title="Config GitHub">⚙️</button>
+            <button class="nav-btn" onclick="openConfig()" title="Configurações">⚙️</button>
         </div>
     </div>
 
@@ -112,72 +119,105 @@
         </div>
 
         <div id="products" class="panel">
-            <h2>Gerenciar Produtos</h2>
-            <div class="form-group"><input id="p-name" placeholder="Nome"></div>
-            <div class="form-group"><input id="p-code" placeholder="Código"></div>
-            <div class="form-group"><input id="p-price" type="number" step="0.01" placeholder="Preço"></div>
-            <button class="btn" onclick="addProduct()">Salvar Produto</button>
-            <hr>
-            <div id="p-list"></div>
+            <h2>Produtos</h2>
+            <div class="form-group"><label>Nome</label><input id="p-name"></div>
+            <div class="form-group"><label>Código</label><input id="p-code"></div>
+            <div class="row-inputs">
+                <div class="form-group" style="flex:1"><label>Preço</label><input id="p-price" type="number" step="0.01"></div>
+            </div>
+            <div style="background:#eef2f5; padding:10px; border-radius:5px; margin-bottom:15px; border-left:3px solid var(--accent);">
+                <h4 style="margin:0 0 10px 0;">Atacado (Opcional)</h4>
+                <div class="row-inputs">
+                    <div class="form-group" style="flex:1"><label>Acima de:</label><input id="p-bulk-min" type="number"></div>
+                    <div class="form-group" style="flex:1"><label>Novo Preço:</label><input id="p-bulk-price" type="number" step="0.01"></div>
+                </div>
+            </div>
+            <button class="btn" onclick="addProduct()">Salvar</button>
+            <hr><div id="p-list"></div>
         </div>
 
         <div id="clients" class="panel">
-            <h2>Gerenciar Clientes</h2>
-            <div class="form-group"><input id="c-name" placeholder="Nome"></div>
-            <div class="form-group"><input id="c-phone" placeholder="WhatsApp"></div>
-            <button class="btn" onclick="addClient(false)">Salvar Cliente</button>
-            <hr>
-            <div id="c-list"></div>
+            <h2>Clientes</h2>
+            <div class="form-group"><label>Nome</label><input id="c-name"></div>
+            <div class="form-group"><label>WhatsApp</label><input id="c-phone"></div>
+            <div class="form-group"><label>Endereço (Rua, Nº, Bairro)</label><input id="c-addr"></div>
+            <button class="btn" onclick="addClient(false)">Salvar</button>
+            <hr><div id="c-list"></div>
         </div>
 
         <div id="history" class="panel">
-            <h2>Histórico de Vendas</h2>
-            <button class="btn" onclick="loadData()">🔄 Atualizar Lista</button>
-            <hr>
-            <div id="h-list"></div>
+            <h2>Histórico</h2>
+            <button class="btn" onclick="loadData()">🔄 Atualizar</button>
+            <hr><div id="h-list"></div>
         </div>
     </div>
 
     <div id="config-modal" class="modal">
         <div class="modal-content">
-            <h3>Conexão GitHub</h3>
-            <div class="form-group"><label>Usuário:</label><input id="gh-user"></div>
-            <div class="form-group"><label>Repositório:</label><input id="gh-repo"></div>
-            <div class="form-group"><label>Token:</label><input type="password" id="gh-token"></div>
-            <button class="btn" onclick="saveConfig()">Salvar e Conectar</button>
+            <h3>⚙️ Configurações</h3>
+            
+            <details style="margin-bottom:10px;">
+                <summary style="font-weight:bold; cursor:pointer">☁️ Conexão GitHub</summary>
+                <div class="form-group"><label>Usuário:</label><input id="gh-user"></div>
+                <div class="form-group"><label>Repositório:</label><input id="gh-repo"></div>
+                <div class="form-group"><label>Token:</label><input type="password" id="gh-token"></div>
+            </details>
+
+            <details style="margin-bottom:10px;">
+                <summary style="font-weight:bold; cursor:pointer">🖨️ Impressão & Visual</summary>
+                <div class="row-inputs">
+                    <div class="form-group"><label>Largura Cupom (ex: 48mm):</label><input id="cfg-print-width" placeholder="48mm"></div>
+                    <div class="form-group"><label>Tamanho Fonte (ex: 11px):</label><input id="cfg-print-font" placeholder="11px"></div>
+                </div>
+            </details>
+
+            <details style="margin-bottom:10px;">
+                <summary style="font-weight:bold; cursor:pointer">💳 Pagamento & Pix</summary>
+                <div class="form-group">
+                    <label>Chave Pix (CPF/CNPJ/Cel/Email):</label>
+                    <input id="cfg-pix-key" placeholder="Apenas numeros">
+                </div>
+                <div class="form-group">
+                    <label>Formas de Pagamento (Separadas por vírgula):</label>
+                    <input id="cfg-pay-methods" placeholder="Pix,Dinheiro,Cartão">
+                </div>
+            </details>
+
+            <button class="btn" style="width:100%" onclick="saveConfig()">Salvar Tudo</button>
         </div>
     </div>
 
     <div id="checkout-modal" class="modal">
         <div class="modal-content">
             <h3>Finalizar Venda</h3>
-            
             <div class="form-group" style="display:flex; gap:5px; align-items:end;">
-                <div style="flex:1">
-                    <label>Cliente:</label>
-                    <select id="checkout-client"></select>
-                </div>
-                <button class="btn" onclick="toggleQuickClient()" title="Novo Cliente" style="padding: 10px;">+</button>
+                <div style="flex:1"><label>Cliente:</label><select id="checkout-client"></select></div>
+                <button class="btn" onclick="toggleQuickClient()" title="Novo Cliente" style="padding:10px;">+</button>
             </div>
-
+            
             <div id="quick-client-form">
-                <h4>Novo Cliente Rápido</h4>
-                <div class="form-group"><input id="qc-name" placeholder="Nome Completo"></div>
+                <h4>Novo Cliente</h4>
+                <div class="form-group"><input id="qc-name" placeholder="Nome"></div>
                 <div class="form-group"><input id="qc-phone" placeholder="WhatsApp"></div>
-                <button class="btn" style="background:var(--success)" onclick="addClient(true)">Cadastrar Agora</button>
+                <div class="form-group"><input id="qc-addr" placeholder="Endereço"></div>
+                <button class="btn" style="background:var(--success)" onclick="addClient(true)">Cadastrar</button>
             </div>
 
             <div class="form-group">
                 <label>Pagamentos (Total: R$ <span id="checkout-total">0.00</span>)</label>
                 <div id="payment-list"></div>
-                <button class="btn" style="background:#ddd; color:black; width:100%; margin-top:5px;" onclick="addPaymentRow()">+ Adicionar Forma de Pagamento</button>
+                <button class="btn" style="background:#ddd; color:black; width:100%; margin-top:5px;" onclick="addPaymentRow()">+ Add Pagamento</button>
             </div>
 
-            <div class="form-group">
-                <label>Link da Galeria (Gera QR Code):</label>
-                <input type="text" id="gallery-link" placeholder="https://...">
+            <div id="pix-display">
+                <strong>Pagar com Pix</strong>
+                <div id="pix-qrcode-checkout" style="display:flex; justify-content:center; margin:10px 0;"></div>
+                <div id="pix-code-text"></div>
+                <button class="btn" style="margin-top:5px; font-size:12px;" onclick="copyPix()">Copiar Código</button>
             </div>
 
+            <div class="form-group"><label>Link Galeria (QR Code Cupom):</label><input id="gallery-link"></div>
+            
             <div style="margin-top:20px; display:flex; gap:10px;">
                 <button class="btn" style="background:#ccc; flex:1" onclick="closeCheckout()">Cancelar</button>
                 <button class="btn-checkout" style="flex:1" onclick="finishOrder()">IMPRIMIR</button>
@@ -186,56 +226,49 @@
     </div>
 
     <div id="receipt" style="display:none">
-        <div class="rec-header">
-            <strong>STUDIO NBV</strong><br>
-            Fotografia & Impressão<br>
-            Boa Ventura de São Roque
-        </div>
+        <div class="rec-header"><strong>STUDIO NBV</strong><br>Boa Ventura de São Roque</div>
         <div class="rec-line"></div>
         <div id="rec-meta"></div>
+        <div id="rec-addr" style="font-size: 10px; margin-bottom:5px;"></div>
         <div class="rec-line"></div>
         <table style="width:100%" id="rec-items"></table>
         <div class="rec-line"></div>
         <div class="rec-total">TOTAL: R$ <span id="rec-total-val"></span></div>
         <div id="rec-payments" style="text-align:right; font-size:10px;"></div>
-        
-        <div id="qr-area" style="text-align:center; margin-top:10px; display:none;">
-            <span>Acesse suas fotos:</span>
-            <div id="qrcode"></div>
-        </div>
-        
-        <div style="text-align:center; margin-top:15px; font-size:10px;">
-            Obrigado pela preferência!<br>Volte Sempre.
-        </div>
+        <div id="qr-area" style="text-align:center; margin-top:10px; display:none;"><span>Fotos:</span><div id="qrcode"></div></div>
+        <div style="text-align:center; margin-top:10px; font-size:10px;">Obrigado!</div>
     </div>
 
     <script>
         // --- CORE ---
         let db = { products: [], clients: [], sales: [] };
         let cart = [];
-        let config = JSON.parse(localStorage.getItem('nbv_gh_config')) || {};
+        let config = JSON.parse(localStorage.getItem('nbv_config_v4')) || { 
+            printWidth: '48mm', printFont: '11px', pixKey: '', payMethods: 'Pix,Dinheiro,Cartão Crédito,Cartão Débito'
+        };
         let fileSha = '';
+
+        // Aplica configs visuais ao iniciar
+        document.documentElement.style.setProperty('--print-width', config.printWidth);
+        document.documentElement.style.setProperty('--print-font', config.printFont);
 
         // --- GITHUB ---
         async function ghRequest(method, body = null) {
             const { user, repo, token } = config;
             if(!user || !repo || !token) return openConfig();
             document.getElementById('loader').style.width = '50%';
-            
             try {
                 const url = `https://api.github.com/repos/${user}/${repo}/contents/db.json`;
                 const headers = { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json' };
                 const fetchUrl = method === 'GET' ? `${url}?t=${Date.now()}` : url;
                 const options = { method, headers, body: body ? JSON.stringify(body) : null };
-                
                 const res = await fetch(fetchUrl, options);
                 document.getElementById('loader').style.width = '100%';
                 setTimeout(()=>document.getElementById('loader').style.width='0%', 500);
-                
                 if (!res.ok) throw new Error(res.status);
                 return await res.json();
             } catch (e) {
-                alert('Erro GitHub: ' + e.message);
+                alert('Conexão GitHub falhou: ' + e.message);
                 return null;
             }
         }
@@ -248,7 +281,9 @@
             if (data) {
                 fileSha = data.sha;
                 db = JSON.parse(fromBase64(data.content));
-                if(!db.sales) db.sales = []; // Garante compatibilidade
+                if(!db.sales) db.sales = [];
+                // Migração de dados antigos se necessário
+                db.products = db.products.map(p => ({...p, bulkMin: p.bulkMin||0, bulkPrice: p.bulkPrice||0 }));
                 renderAll();
             }
         }
@@ -269,26 +304,58 @@
             if(id === 'history') renderHistory();
         }
 
-        function openConfig() { document.getElementById('config-modal').style.display = 'flex'; }
+        function openConfig() { 
+            // Preencher campos
+            document.getElementById('gh-user').value = config.user || '';
+            document.getElementById('gh-repo').value = config.repo || '';
+            document.getElementById('gh-token').value = config.token || '';
+            document.getElementById('cfg-print-width').value = config.printWidth;
+            document.getElementById('cfg-print-font').value = config.printFont;
+            document.getElementById('cfg-pix-key').value = config.pixKey || '';
+            document.getElementById('cfg-pay-methods').value = config.payMethods;
+            
+            document.getElementById('config-modal').style.display = 'flex'; 
+        }
+
         function saveConfig() {
             config = {
                 user: document.getElementById('gh-user').value.trim(),
                 repo: document.getElementById('gh-repo').value.trim(),
-                token: document.getElementById('gh-token').value.trim()
+                token: document.getElementById('gh-token').value.trim(),
+                printWidth: document.getElementById('cfg-print-width').value.trim() || '48mm',
+                printFont: document.getElementById('cfg-print-font').value.trim() || '11px',
+                pixKey: document.getElementById('cfg-pix-key').value.trim(),
+                payMethods: document.getElementById('cfg-pay-methods').value.trim()
             };
-            localStorage.setItem('nbv_gh_config', JSON.stringify(config));
+            
+            // Atualiza CSS instantaneamente
+            document.documentElement.style.setProperty('--print-width', config.printWidth);
+            document.documentElement.style.setProperty('--print-font', config.printFont);
+
+            localStorage.setItem('nbv_config_v4', JSON.stringify(config));
             document.getElementById('config-modal').style.display = 'none';
             loadData();
         }
 
-        // --- GESTÃO ---
+        // --- PRODUTOS & CLIENTES ---
         function addProduct() {
             const name = document.getElementById('p-name').value;
             const price = parseFloat(document.getElementById('p-price').value);
             if(name && price) {
-                db.products.push({id: Date.now(), name, code: document.getElementById('p-code').value, price});
+                db.products.push({
+                    id: Date.now(), 
+                    name, 
+                    code: document.getElementById('p-code').value, 
+                    price,
+                    bulkMin: parseInt(document.getElementById('p-bulk-min').value)||0,
+                    bulkPrice: parseFloat(document.getElementById('p-bulk-price').value)||0
+                });
                 saveData(); renderAll();
                 document.getElementById('p-name').value = '';
+                document.getElementById('p-code').value = '';
+                document.getElementById('p-price').value = '';
+                document.getElementById('p-bulk-min').value = '';
+                document.getElementById('p-bulk-price').value = '';
             }
         }
 
@@ -296,22 +363,20 @@
             const prefix = isQuick ? 'qc' : 'c';
             const name = document.getElementById(prefix+'-name').value;
             const phone = document.getElementById(prefix+'-phone').value;
+            const addr = document.getElementById(prefix+'-addr').value; // Novo Campo
             
             if(name) {
-                const newClient = {id: Date.now(), name, phone};
+                const newClient = {id: Date.now(), name, phone, addr};
                 db.clients.push(newClient);
                 saveData(); 
-                
                 if(isQuick) {
                     renderClientSelect();
-                    document.getElementById('checkout-client').value = newClient.id; // Seleciona automaticamente
-                    toggleQuickClient(); // Fecha o form rapido
-                } else {
-                    renderAll();
-                }
-                
+                    document.getElementById('checkout-client').value = newClient.id;
+                    toggleQuickClient();
+                } else renderAll();
                 document.getElementById(prefix+'-name').value = '';
                 document.getElementById(prefix+'-phone').value = '';
+                document.getElementById(prefix+'-addr').value = '';
             }
         }
 
@@ -321,67 +386,79 @@
         }
 
         function renderAll() {
-            // Grid Produtos
             const term = document.getElementById('search').value.toLowerCase();
             const grid = document.getElementById('grid');
             grid.innerHTML = '';
+            
             db.products.forEach(p => {
                 if(p.name.toLowerCase().includes(term) || (p.code && p.code.includes(term))) {
+                    const hasBulk = p.bulkMin > 0;
                     const d = document.createElement('div');
                     d.className = 'card';
-                    d.innerHTML = `<b>${p.name}</b><br>R$ ${p.price.toFixed(2)}`;
+                    d.innerHTML = `${hasBulk ? `<span class="badge-bulk">Atacado >${p.bulkMin}</span>` : ''}<b>${p.name}</b><br>R$ ${p.price.toFixed(2)}`;
                     d.onclick = () => addToCart(p);
                     grid.appendChild(d);
                 }
             });
 
-            // Listas
             document.getElementById('p-list').innerHTML = db.products.map(p => `<div>${p.name} <button onclick="del('products',${p.id})">x</button></div>`).join('');
-            document.getElementById('c-list').innerHTML = db.clients.map(c => `<div>${c.name}</div>`).join('');
+            document.getElementById('c-list').innerHTML = db.clients.map(c => `<div>${c.name} - ${c.addr || ''}</div>`).join('');
         }
 
-        function del(type, id) {
-            if(confirm('Apagar?')) {
-                db[type] = db[type].filter(x => x.id !== id);
-                saveData(); renderAll();
-            }
-        }
+        function del(type, id) { if(confirm('Apagar?')) { db[type] = db[type].filter(x => x.id !== id); saveData(); renderAll(); } }
 
-        // --- CART ---
+        // --- CARRINHO ---
         function addToCart(p) {
             const ex = cart.find(x => x.id === p.id);
-            if(ex) ex.qty++; else cart.push({...p, qty: 1});
+            if(ex) updateQty(cart.indexOf(ex), ex.qty + 1);
+            else { cart.push({...p, qty: 1, currentPrice: p.price}); renderCart(); }
+        }
+
+        function updateQty(idx, newQty) {
+            newQty = parseInt(newQty);
+            if(newQty < 1) return;
+            const item = cart[idx];
+            const originalProd = db.products.find(p => p.id === item.id);
+            item.qty = newQty;
+            
+            if(originalProd && originalProd.bulkMin > 0 && newQty >= originalProd.bulkMin) item.currentPrice = originalProd.bulkPrice;
+            else item.currentPrice = originalProd ? originalProd.price : item.price;
+            
             renderCart();
         }
+
+        function updatePriceManual(idx, newPrice) { cart[idx].currentPrice = parseFloat(newPrice); renderCart(); }
 
         function renderCart() {
             const list = document.getElementById('cart-list');
             list.innerHTML = '';
             let total = 0;
             cart.forEach((i, idx) => {
-                total += i.qty * i.price;
+                total += i.qty * i.currentPrice;
+                const original = db.products.find(p => p.id === i.id);
+                const isBulk = original && original.bulkMin > 0 && i.qty >= original.bulkMin;
                 list.innerHTML += `<div class="cart-item">
-                    <div style="flex:2"><b>${i.name}</b></div>
-                    <div style="flex:1"><input type="number" value="${i.qty}" style="width:40px" onchange="cart[${idx}].qty=this.value;renderCart()"></div>
-                    <div style="flex:1;text-align:right">R$ ${(i.qty*i.price).toFixed(2)} <span onclick="cart.splice(${idx},1);renderCart()" style="color:red;cursor:pointer">x</span></div>
-                </div>`;
+                        <div style="flex:2"><b>${i.name}</b>${isBulk ? '<br><small style="color:var(--accent)">Promo</small>' : ''}</div>
+                        <div style="flex:1"><input type="number" value="${i.qty}" style="width:50px" onchange="updateQty(${idx}, this.value)"> x <input type="number" value="${i.currentPrice.toFixed(2)}" style="width:60px" step="0.01" onchange="updatePriceManual(${idx}, this.value)"></div>
+                        <div style="flex:1;text-align:right">R$ ${(i.qty*i.currentPrice).toFixed(2)} <span onclick="cart.splice(${idx},1);renderCart()" style="color:red;cursor:pointer">x</span></div>
+                    </div>`;
             });
             document.getElementById('total').innerText = total.toFixed(2);
             document.getElementById('checkout-total').innerText = total.toFixed(2);
         }
 
-        // --- CHECKOUT COMPLEXO ---
+        // --- CHECKOUT & PIX ---
         function openCheckout() {
             if(!cart.length) return alert('Carrinho vazio');
             document.getElementById('checkout-modal').style.display = 'flex';
             renderClientSelect();
             document.getElementById('payment-list').innerHTML = '';
-            addPaymentRow(); // Inicia com uma linha
+            addPaymentRow();
             document.getElementById('gallery-link').value = '';
+            document.getElementById('pix-display').style.display = 'none';
         }
-
         function closeCheckout() { document.getElementById('checkout-modal').style.display = 'none'; }
-
+        
         function renderClientSelect() {
             const sel = document.getElementById('checkout-client');
             sel.innerHTML = '<option value="">Consumidor Final</option>';
@@ -389,129 +466,156 @@
         }
 
         function addPaymentRow() {
+            const methods = config.payMethods.split(',');
+            const options = methods.map(m => `<option>${m.trim()}</option>`).join('');
+            
             const div = document.createElement('div');
             div.className = 'payment-row';
-            div.innerHTML = `
-                <select class="pay-method">
-                    <option>Pix</option><option>Dinheiro</option><option>Cartão Crédito</option><option>Cartão Débito</option>
-                </select>
-                <input type="number" class="pay-amount" step="0.01" placeholder="Valor">
-                <button onclick="this.parentElement.remove()" style="background:#c0392b;color:white;border:none;">x</button>
-            `;
+            div.innerHTML = `<select class="pay-method" onchange="checkPix(this)">${options}</select><input type="number" class="pay-amount" step="0.01" placeholder="Valor" onchange="updatePixValue()"><button onclick="this.parentElement.remove(); document.getElementById('pix-display').style.display='none'" style="background:#c0392b;color:white;border:none;">x</button>`;
             document.getElementById('payment-list').appendChild(div);
+            
+            // Auto preencher valor restante
+            const total = parseFloat(document.getElementById('total').innerText);
+            let current = 0;
+            document.querySelectorAll('.pay-amount').forEach(el => current += parseFloat(el.value)||0);
+            const remaining = total - current;
+            if(remaining > 0) {
+                div.querySelector('.pay-amount').value = remaining.toFixed(2);
+            }
+            
+            checkPix(div.querySelector('.pay-method'));
         }
 
+        // --- GERADOR PIX (EMV/BR Code) ---
+        function checkPix(selectEl) {
+            const val = selectEl.value.toLowerCase();
+            const row = selectEl.parentElement;
+            const amount = row.querySelector('.pay-amount').value;
+            
+            if(val.includes('pix') && config.pixKey) {
+                generatePix(amount);
+            }
+        }
+        
+        function updatePixValue() {
+             // Se houver um Pix selecionado, atualiza o QR
+             const rows = document.querySelectorAll('.payment-row');
+             rows.forEach(r => {
+                 if(r.querySelector('.pay-method').value.toLowerCase().includes('pix')) {
+                     generatePix(r.querySelector('.pay-amount').value);
+                 }
+             });
+        }
+
+        function generatePix(amount) {
+            if(!config.pixKey) return;
+            const payload = createPixPayload(config.pixKey, "Studio NBV", "Boa Ventura", amount, "P"+Date.now());
+            
+            document.getElementById('pix-display').style.display = 'block';
+            document.getElementById('pix-code-text').innerText = payload;
+            
+            const div = document.getElementById('pix-qrcode-checkout');
+            div.innerHTML = '';
+            new QRCode(div, { text: payload, width: 128, height: 128 });
+        }
+        
+        function copyPix() {
+            navigator.clipboard.writeText(document.getElementById('pix-code-text').innerText);
+            alert('Código Pix copiado!');
+        }
+
+        // Função Técnica Pix (CRC16 + TLV)
+        function createPixPayload(key, name, city, amount, txid) {
+            function format(id, val) { 
+                const len = val.length.toString().padStart(2, '0');
+                return id + len + val; 
+            }
+            
+            // Normalizar
+            name = name.substring(0,25); 
+            city = city.substring(0,15);
+            amount = parseFloat(amount).toFixed(2);
+            
+            let p = "00020126" + (14 + key.length + 4) + "0014BR.GOV.BCB.PIX01" + (key.length).toString().padStart(2,'0') + key;
+            p += "52040000"; // Merchant Cat
+            p += "5303986"; // BRL
+            if(amount > 0) p += format("54", amount);
+            p += "5802BR";
+            p += format("59", name);
+            p += format("60", city);
+            p += format("62", txid.length < 1 ? "***" : txid); // ID Transaction
+            p += "6304"; // CRC Place holder
+
+            // Calcular CRC16
+            function crc16(str) {
+                let crc = 0xFFFF;
+                for (let i = 0; i < str.length; i++) {
+                    crc ^= str.charCodeAt(i) << 8;
+                    for (let j = 0; j < 8; j++) {
+                        if ((crc & 0x8000) !== 0) crc = (crc << 1) ^ 0x1021;
+                        else crc = crc << 1;
+                    }
+                }
+                return (crc & 0xFFFF).toString(16).toUpperCase().padStart(4, '0');
+            }
+            
+            return p + crc16(p);
+        }
+
+        // --- FINALIZAR ---
         function finishOrder() {
-            // Coletar Pagamentos
             const payRows = document.querySelectorAll('.payment-row');
             let payments = [];
-            let payTotal = 0;
-            payRows.forEach(row => {
-                const method = row.querySelector('.pay-method').value;
-                const val = parseFloat(row.querySelector('.pay-amount').value) || 0;
-                if(val > 0) {
-                    payments.push({ method, val });
-                    payTotal += val;
-                }
+            payRows.forEach(r => {
+                const val = parseFloat(r.querySelector('.pay-amount').value) || 0;
+                if(val > 0) payments.push({ method: r.querySelector('.pay-method').value, val });
             });
 
-            // Validar
-            const cartTotal = parseFloat(document.getElementById('total').innerText);
-            // Aviso opcional se o valor não bater, mas deixamos passar para flexibilidade (descontos, etc)
-            
-            // Dados da Venda
-            const clientId = document.getElementById('checkout-client').value;
-            const clientObj = db.clients.find(c => c.id == clientId);
-            const clientName = clientObj ? clientObj.name : 'Consumidor Final';
-            const link = document.getElementById('gallery-link').value;
+            const clientSelect = document.getElementById('checkout-client');
+            const clientObj = db.clients.find(c => c.id == clientSelect.value);
             
             const sale = {
                 id: Date.now(),
                 date: new Date().toLocaleString('pt-BR'),
-                client: clientName,
-                items: cart,
-                total: cartTotal,
+                client: clientObj ? clientObj.name : 'Consumidor Final',
+                addr: clientObj ? clientObj.addr : '',
+                items: cart.map(i => ({...i, price: i.currentPrice})),
+                total: parseFloat(document.getElementById('total').innerText),
                 payments: payments,
-                link: link
+                link: document.getElementById('gallery-link').value
             };
 
-            // Salvar
             db.sales.push(sale);
             saveData();
-            
-            // Imprimir
             printReceipt(sale);
-
-            // Reset
-            cart = [];
-            renderCart();
-            closeCheckout();
+            cart = []; renderCart(); closeCheckout();
         }
 
-        // --- IMPRESSÃO & QR ---
         function printReceipt(sale) {
-            // Preencher dados
             document.getElementById('rec-meta').innerHTML = `Data: ${sale.date}<br>Cliente: ${sale.client}`;
+            document.getElementById('rec-addr').innerText = sale.addr ? `End: ${sale.addr}` : '';
             
-            let html = '';
-            sale.items.forEach(i => {
-                html += `<tr><td>${i.qty}x ${i.name}</td><td align="right">R$ ${(i.qty*i.price).toFixed(2)}</td></tr>`;
-            });
-            document.getElementById('rec-items').innerHTML = html;
+            document.getElementById('rec-items').innerHTML = sale.items.map(i => `<tr><td>${i.qty}x ${i.name}</td><td align="right">R$ ${(i.qty*i.price).toFixed(2)}</td></tr>`).join('');
             document.getElementById('rec-total-val').innerText = sale.total.toFixed(2);
+            document.getElementById('rec-payments').innerHTML = sale.payments.map(p => `<div>${p.method}: R$ ${p.val.toFixed(2)}</div>`).join('');
             
-            // Pagamentos
-            let payHtml = '';
-            sale.payments.forEach(p => payHtml += `<div>${p.method}: R$ ${p.val.toFixed(2)}</div>`);
-            document.getElementById('rec-payments').innerHTML = payHtml;
-
-            // QR Code
-            const qrContainer = document.getElementById('qrcode');
-            qrContainer.innerHTML = '';
-            const qrArea = document.getElementById('qr-area');
-            
+            const qrC = document.getElementById('qrcode'); qrC.innerHTML = '';
             if(sale.link) {
-                qrArea.style.display = 'block';
-                new QRCode(qrContainer, {
-                    text: sale.link,
-                    width: 100,
-                    height: 100,
-                    colorDark : "#000000",
-                    colorLight : "#ffffff",
-                    correctLevel : QRCode.CorrectLevel.L
-                });
-            } else {
-                qrArea.style.display = 'none';
-            }
-
-            // Delay para renderizar o QR Code antes de imprimir
+                document.getElementById('qr-area').style.display = 'block';
+                new QRCode(qrC, { text: sale.link, width: 80, height: 80 });
+            } else document.getElementById('qr-area').style.display = 'none';
+            
             setTimeout(() => window.print(), 500);
         }
 
-        // --- HISTÓRICO ---
         function renderHistory() {
             const list = document.getElementById('h-list');
-            // Ordenar por mais recente
-            const sorted = [...db.sales].sort((a,b) => b.id - a.id);
-            
-            list.innerHTML = sorted.map(s => `
-                <div class="history-item">
-                    <div>
-                        <strong>${s.date}</strong> - ${s.client}<br>
-                        R$ ${s.total.toFixed(2)} (${s.items.length} itens)
-                    </div>
-                    <button class="btn" onclick='reprint(${JSON.stringify(s)})'>🖨️</button>
-                </div>
-            `).join('');
+            list.innerHTML = [...db.sales].sort((a,b)=>b.id-a.id).map(s => 
+                `<div class="history-item"><div><strong>${s.date}</strong> - ${s.client}<br>R$ ${s.total.toFixed(2)}</div><button class="btn" onclick='printReceipt(${JSON.stringify(s)})'>🖨️</button></div>`
+            ).join('');
         }
 
-        function reprint(sale) {
-            printReceipt(sale);
-        }
-
-        // Init
         if(config.token) loadData(); else openConfig();
-
     </script>
 </body>
 </html>
