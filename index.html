@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Studio NBV - PDV 14.0 (Supremacia)</title>
+    <title>Studio NBV - PDV 15.0 (Speed)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         :root { 
@@ -95,7 +95,7 @@
 
         <div id="pdv" class="pdv-container">
             <div class="product-area">
-                <input type="text" id="search" class="search-bar" placeholder="[F2] Buscar ou Bipar Código..." onkeyup="renderGrid()">
+                <input type="text" id="search" class="search-bar" placeholder="[F2] Ex: 1015-10 (Código-Qtd)..." onkeyup="renderGrid()">
                 <div id="grid" class="grid"></div>
             </div>
             <div class="cart-area">
@@ -146,30 +146,18 @@
 
         <div id="budget" class="panel">
             <h2>Gerador de Orçamento</h2>
-            
-            <input type="text" id="bud-search" class="search-bar" placeholder="Buscar produto para adicionar..." onkeyup="filterBudgetProducts()">
+            <input type="text" id="bud-search" class="search-bar" placeholder="Buscar produto..." onkeyup="filterBudgetProducts()">
             <div id="bud-grid" class="grid" style="max-height: 200px; overflow-y: auto; margin-bottom: 20px; border-bottom: 2px solid #ddd; padding-bottom: 10px;"></div>
-
             <h3>Itens do Orçamento</h3>
             <div id="budget-items-list" style="background: white; border: 1px solid #ddd; min-height: 100px; max-height: 300px; overflow-y: auto; border-radius: 8px;"></div>
-
             <div style="margin-top: 15px; background: #eef2f5; padding: 10px; border-radius: 8px;">
                 <h4>Adicionais</h4>
                 <div class="row-inputs">
-                    <div class="form-group" style="flex:1">
-                        <label>Valor Entrada (R$):</label>
-                        <input type="number" id="bud-entry" placeholder="0.00" step="0.01">
-                    </div>
-                    <div class="form-group" style="flex:1">
-                        <label>Valor Arquivos (R$):</label>
-                        <input type="number" id="bud-files" placeholder="0.00" step="0.01">
-                    </div>
+                    <div class="form-group" style="flex:1"><label>Valor Entrada (R$):</label><input type="number" id="bud-entry" placeholder="0.00" step="0.01"></div>
+                    <div class="form-group" style="flex:1"><label>Valor Arquivos (R$):</label><input type="number" id="bud-files" placeholder="0.00" step="0.01"></div>
                 </div>
             </div>
-
-            <button class="btn" style="width:100%; margin-top: 15px; background: #25D366; border: none;" onclick="generateBudget()">
-                📲 Copiar para WhatsApp
-            </button>
+            <button class="btn" style="width:100%; margin-top: 15px; background: #25D366; border: none;" onclick="generateBudget()">📲 Copiar para WhatsApp</button>
         </div>
 
         <div id="history" class="panel">
@@ -182,11 +170,11 @@
     <div id="import-modal" class="modal">
         <div class="modal-content">
             <h3>⚡ Importar Produtos em Lote</h3>
-            <p style="font-size:12px">Cole abaixo no formato: <b>CÓDIGO, NOME, PREÇO, QTD_ATACADO, PREÇO_ATACADO</b><br>Exemplo: <i>1015, Foto 10x15, 5.00, 10, 3.50</i></p>
+            <p style="font-size:12px">Formato: <b>CÓDIGO, NOME, PREÇO, QTD_ATACADO, PREÇO_ATACADO</b><br>Ex: <i>1015, Foto 10x15, 5.00, 10, 3.50</i></p>
             <textarea id="import-text" rows="10" style="width:100%; padding:10px; border:1px solid #ccc"></textarea>
             <div class="row-inputs" style="margin-top:10px;">
                 <button class="btn" style="background:#ccc" onclick="document.getElementById('import-modal').style.display='none'">Cancelar</button>
-                <button class="btn" onclick="processImport()">Importar Agora</button>
+                <button class="btn" onclick="processImport()">Importar</button>
             </div>
         </div>
     </div>
@@ -223,14 +211,12 @@
                 <div style="flex:1"><label>Cliente:</label><select id="checkout-client"></select></div>
                 <button class="btn" onclick="toggleQuickClient()" title="Novo" style="padding:10px;">+</button>
             </div>
-            
             <div id="quick-client-form" style="display:none;background:#eee;padding:10px;margin-bottom:10px;">
                 <div class="form-group"><input id="qc-name" placeholder="Nome"></div>
                 <div class="form-group"><input id="qc-phone" placeholder="Zap"></div>
                 <div class="form-group"><input id="qc-addr" placeholder="Endereço"></div>
                 <button class="btn" onclick="addClient(true)">Cadastrar</button>
             </div>
-
             <div style="background:#fff3cd; padding:10px; border-radius:5px; margin-bottom:10px; border:1px solid #ffeeba;">
                 <div class="row-inputs" style="align-items:center;">
                     <span style="font-weight:bold">Desconto:</span>
@@ -238,25 +224,20 @@
                     <select id="disc-type" style="width:60px" onchange="calcTotal()"><option value="$">R$</option><option value="%">%</option></select>
                 </div>
             </div>
-
             <div class="form-group">
                 <label>Total Final: R$ <span id="checkout-final" style="font-size:1.2em;color:var(--success)">0.00</span></label>
                 <div id="payment-list"></div>
                 <button class="btn" style="background:#ddd; color:#000; width:100%; margin-top:5px;" onclick="addPaymentRow()">+ Add Pagamento</button>
             </div>
-            
             <div id="change-display" style="text-align:right; font-size:1.2em; color:blue; font-weight:bold; margin-top:10px; display:none;">
                 TROCO: R$ <span id="change-val">0.00</span>
             </div>
-
             <div id="pix-display" style="display:none; text-align:center; background:#e8f8f5; padding:10px; border:1px solid #27ae60; margin-top:5px;">
                 <strong>QR Code Pix (Tela)</strong>
                 <div id="pix-qrcode-checkout" style="display:flex; justify-content:center; margin:5px;"></div>
                 <button class="btn" style="font-size:10px" onclick="copyPix()">Copiar Código</button>
             </div>
-
             <div class="form-group" style="margin-top:10px;"><label>Link Galeria (QR Code Cupom):</label><input id="gallery-link"></div>
-            
             <div style="margin-top:20px; display:flex; gap:10px;">
                 <button class="btn" style="background:#ccc; flex:1" onclick="closeCheckout()">[ESC] Cancelar</button>
                 <button class="btn-checkout" style="flex:1" onclick="finishOrder()">[F8] IMPRIMIR</button>
@@ -292,18 +273,11 @@
     <script>
         // --- CORE ---
         let db = { products: [], clients: [], sales: [], settings: { printWidth: '48mm', printFont: '12px', pixKey: '', payMethods: 'Pix,Dinheiro,Cartão', headerText: 'STUDIO NBV', footerText: 'Obrigado!' } };
-        let cart = [];
-        let budgetCart = []; // Carrinho específico para orçamentos
+        let cart = []; let budgetCart = [];
         let auth = JSON.parse(localStorage.getItem('nbv_auth')) || { user: '', repo: '', token: '' };
-        let fileSha = '';
-        let editingClientId = null;
-        let editingProductId = null;
+        let fileSha = ''; let editingClientId = null; let editingProductId = null;
 
-        function applySettings() {
-            const s = db.settings;
-            document.documentElement.style.setProperty('--print-width', s.printWidth);
-            document.documentElement.style.setProperty('--print-font', s.printFont);
-        }
+        function applySettings() { document.documentElement.style.setProperty('--print-width', db.settings.printWidth); document.documentElement.style.setProperty('--print-font', db.settings.printFont); }
 
         async function ghRequest(method, body = null) {
             if(!auth.user || !auth.repo || !auth.token) return openConfig();
@@ -314,8 +288,7 @@
                 const fetchUrl = method === 'GET' ? `${url}?t=${Date.now()}` : url;
                 const options = { method, headers, body: body ? JSON.stringify(body) : null };
                 const res = await fetch(fetchUrl, options);
-                document.getElementById('loader').style.width = '100%';
-                setTimeout(()=>document.getElementById('loader').style.width='0%', 500);
+                document.getElementById('loader').style.width = '100%'; setTimeout(()=>document.getElementById('loader').style.width='0%', 500);
                 if (!res.ok) throw new Error(res.status);
                 return await res.json();
             } catch (e) { alert('GitHub: ' + e.message); return null; }
@@ -327,11 +300,8 @@
         async function loadData() {
             const data = await ghRequest('GET');
             if (data) {
-                fileSha = data.sha;
-                const remoteDb = JSON.parse(fromBase64(data.content));
-                db.products = remoteDb.products || [];
-                db.clients = remoteDb.clients || [];
-                db.sales = remoteDb.sales || [];
+                fileSha = data.sha; const remoteDb = JSON.parse(fromBase64(data.content));
+                db.products = remoteDb.products || []; db.clients = remoteDb.clients || []; db.sales = remoteDb.sales || [];
                 if(remoteDb.settings) db.settings = remoteDb.settings;
                 db.products = db.products.map(p => ({...p, bulkMin: p.bulkMin||0, bulkPrice: p.bulkPrice||0 }));
                 applySettings(); renderAll();
@@ -355,33 +325,19 @@
         }
 
         function openConfig() { 
-            document.getElementById('gh-user').value = auth.user || '';
-            document.getElementById('gh-repo').value = auth.repo || '';
-            document.getElementById('gh-token').value = auth.token || '';
-            const s = db.settings;
-            document.getElementById('cfg-print-width').value = s.printWidth;
-            document.getElementById('cfg-print-font').value = s.printFont;
-            document.getElementById('cfg-pix-key').value = s.pixKey || '';
-            document.getElementById('cfg-pay-methods').value = s.payMethods;
-            document.getElementById('cfg-header').value = s.headerText;
-            document.getElementById('cfg-footer').value = s.footerText;
+            document.getElementById('gh-user').value = auth.user || ''; document.getElementById('gh-repo').value = auth.repo || ''; document.getElementById('gh-token').value = auth.token || '';
+            const s = db.settings; document.getElementById('cfg-print-width').value = s.printWidth; document.getElementById('cfg-print-font').value = s.printFont; document.getElementById('cfg-pix-key').value = s.pixKey || ''; document.getElementById('cfg-pay-methods').value = s.payMethods; document.getElementById('cfg-header').value = s.headerText; document.getElementById('cfg-footer').value = s.footerText;
             document.getElementById('config-modal').style.display = 'flex'; 
         }
 
         function saveConfig() {
             auth = { user: document.getElementById('gh-user').value.trim(), repo: document.getElementById('gh-repo').value.trim(), token: document.getElementById('gh-token').value.trim() };
             localStorage.setItem('nbv_auth', JSON.stringify(auth));
-            db.settings = {
-                printWidth: document.getElementById('cfg-print-width').value.trim() || '48mm',
-                printFont: document.getElementById('cfg-print-font').value.trim() || '12px',
-                pixKey: document.getElementById('cfg-pix-key').value.trim(),
-                payMethods: document.getElementById('cfg-pay-methods').value.trim(),
-                headerText: document.getElementById('cfg-header').value,
-                footerText: document.getElementById('cfg-footer').value
-            };
+            db.settings = { printWidth: document.getElementById('cfg-print-width').value.trim() || '48mm', printFont: document.getElementById('cfg-print-font').value.trim() || '12px', pixKey: document.getElementById('cfg-pix-key').value.trim(), payMethods: document.getElementById('cfg-pay-methods').value.trim(), headerText: document.getElementById('cfg-header').value, footerText: document.getElementById('cfg-footer').value };
             applySettings(); document.getElementById('config-modal').style.display = 'none'; saveData(); loadData();
         }
 
+        // --- ATALHOS & EVENTOS ---
         document.addEventListener('keydown', function(e) {
             if (e.key === 'F2') { e.preventDefault(); nav('pdv'); document.getElementById('search').focus(); }
             if (e.key === 'F4') { e.preventDefault(); openCheckout(); }
@@ -389,11 +345,25 @@
             if (e.key === 'Escape') { document.getElementById('checkout-modal').style.display = 'none'; document.getElementById('config-modal').style.display = 'none'; document.getElementById('import-modal').style.display = 'none'; }
         });
 
+        // BUSCA COM HÍFEN (CÓDIGO-QTD)
         document.getElementById('search').addEventListener('keydown', function(e) {
             if(e.key === 'Enter') {
-                const term = this.value.toLowerCase();
+                let input = this.value.trim();
+                let qty = 1;
+                let term = input.toLowerCase();
+
+                // Verifica padrão CODIGO-QTD (ex: 1015-10)
+                if (input.includes('-')) {
+                    const parts = input.split('-');
+                    const lastPart = parts[parts.length - 1];
+                    if (!isNaN(lastPart) && lastPart > 0) {
+                        qty = parseInt(lastPart);
+                        term = parts.slice(0, -1).join('-').toLowerCase();
+                    }
+                }
+
                 const exact = db.products.find(p => (p.code && p.code.toLowerCase() === term) || p.name.toLowerCase() === term);
-                if(exact) { addToCart(exact); this.value = ''; renderGrid(); }
+                if(exact) { addToCart(exact, qty); this.value = ''; renderGrid(); }
             }
         });
 
@@ -405,251 +375,128 @@
 
             if(editingProductId) {
                 const prod = db.products.find(p => p.id === editingProductId);
-                if(prod) {
-                    prod.name = name;
-                    prod.code = document.getElementById('p-code').value;
-                    prod.price = price;
-                    prod.bulkMin = parseInt(document.getElementById('p-bulk-min').value)||0;
-                    prod.bulkPrice = parseFloat(document.getElementById('p-bulk-price').value)||0;
-                }
+                if(prod) { prod.name = name; prod.code = document.getElementById('p-code').value; prod.price = price; prod.bulkMin = parseInt(document.getElementById('p-bulk-min').value)||0; prod.bulkPrice = parseFloat(document.getElementById('p-bulk-price').value)||0; }
                 cancelProductEdit();
             } else {
-                db.products.push({
-                    id: Date.now(), name, code: document.getElementById('p-code').value, price,
-                    bulkMin: parseInt(document.getElementById('p-bulk-min').value)||0,
-                    bulkPrice: parseFloat(document.getElementById('p-bulk-price').value)||0
-                });
+                db.products.push({ id: Date.now(), name, code: document.getElementById('p-code').value, price, bulkMin: parseInt(document.getElementById('p-bulk-min').value)||0, bulkPrice: parseFloat(document.getElementById('p-bulk-price').value)||0 });
             }
-            saveData(); renderAll();
-            document.getElementById('p-name').value = '';
-            document.getElementById('p-code').value = '';
-            document.getElementById('p-price').value = '';
-            document.getElementById('p-bulk-min').value = '';
-            document.getElementById('p-bulk-price').value = '';
+            saveData(); renderAll(); document.getElementById('p-name').value = ''; document.getElementById('p-code').value = ''; document.getElementById('p-price').value = ''; document.getElementById('p-bulk-min').value = ''; document.getElementById('p-bulk-price').value = '';
         }
 
         function startProductEdit(id) {
             const p = db.products.find(x => x.id === id); if(!p) return;
-            document.getElementById('p-name').value = p.name;
-            document.getElementById('p-code').value = p.code || '';
-            document.getElementById('p-price').value = p.price;
-            document.getElementById('p-bulk-min').value = p.bulkMin || '';
-            document.getElementById('p-bulk-price').value = p.bulkPrice || '';
-            
-            editingProductId = id;
-            document.getElementById('btn-save-prod').innerText = "Atualizar Produto";
-            document.getElementById('btn-cancel-prod').style.display = "block";
-            document.getElementById('products').scrollTop = 0;
+            document.getElementById('p-name').value = p.name; document.getElementById('p-code').value = p.code || ''; document.getElementById('p-price').value = p.price; document.getElementById('p-bulk-min').value = p.bulkMin || ''; document.getElementById('p-bulk-price').value = p.bulkPrice || '';
+            editingProductId = id; document.getElementById('btn-save-prod').innerText = "Atualizar Produto"; document.getElementById('btn-cancel-prod').style.display = "block"; document.getElementById('products').scrollTop = 0;
         }
 
         function cancelProductEdit() {
-            editingProductId = null;
-            document.getElementById('p-name').value = '';
-            document.getElementById('p-code').value = '';
-            document.getElementById('p-price').value = '';
-            document.getElementById('p-bulk-min').value = '';
-            document.getElementById('p-bulk-price').value = '';
-            document.getElementById('btn-save-prod').innerText = "Salvar Produto";
-            document.getElementById('btn-cancel-prod').style.display = "none";
+            editingProductId = null; document.getElementById('p-name').value = ''; document.getElementById('p-code').value = ''; document.getElementById('p-price').value = ''; document.getElementById('p-bulk-min').value = ''; document.getElementById('p-bulk-price').value = '';
+            document.getElementById('btn-save-prod').innerText = "Salvar Produto"; document.getElementById('btn-cancel-prod').style.display = "none";
         }
 
-        // --- IMPORTAÇÃO EM LOTE ---
+        // --- IMPORTAÇÃO ---
         function openImportModal() { document.getElementById('import-modal').style.display = 'flex'; }
-        
         function processImport() {
-            const text = document.getElementById('import-text').value;
-            const lines = text.split('\n');
-            let count = 0;
+            const lines = document.getElementById('import-text').value.split('\n'); let count = 0;
             lines.forEach(line => {
-                const parts = line.split(',').map(s => s.trim());
-                if(parts.length >= 2) {
-                    const code = parts[0]; const name = parts[1]; const price = parseFloat(parts[2]);
-                    if(name && !isNaN(price)) {
-                        db.products.push({
-                            id: Date.now() + Math.random(),
-                            code: code, name: name, price: price,
-                            bulkMin: parseInt(parts[3]) || 0, bulkPrice: parseFloat(parts[4]) || 0
-                        });
-                        count++;
-                    }
-                }
+                const p = line.split(',').map(s => s.trim());
+                if(p.length >= 2 && !isNaN(parseFloat(p[2]))) { db.products.push({ id: Date.now() + Math.random(), code: p[0], name: p[1], price: parseFloat(p[2]), bulkMin: parseInt(p[3])||0, bulkPrice: parseFloat(p[4])||0 }); count++; }
             });
             if(count > 0) { saveData(); renderAll(); alert(count + ' importados!'); document.getElementById('import-modal').style.display = 'none'; }
         }
 
-        // --- ORÇAMENTO DINÂMICO ---
+        // --- ORÇAMENTOS ---
         function filterBudgetProducts() {
             const term = document.getElementById('bud-search').value.toLowerCase();
-            const grid = document.getElementById('bud-grid');
-            grid.innerHTML = '';
-            
+            const grid = document.getElementById('bud-grid'); grid.innerHTML = '';
             if(term.length === 0) return;
-
             db.products.forEach(p => {
                 if(p.name.toLowerCase().includes(term) || (p.code && p.code.includes(term))) {
-                    const d = document.createElement('div');
-                    d.className = 'card';
-                    d.style.padding = '5px';
-                    d.style.fontSize = '12px';
-                    d.innerHTML = `<b>${p.name}</b><br>R$ ${p.price.toFixed(2)}`;
-                    d.onclick = () => addToBudget(p);
-                    grid.appendChild(d);
+                    const d = document.createElement('div'); d.className = 'card'; d.style.padding = '5px'; d.style.fontSize = '12px';
+                    d.innerHTML = `<b>${p.name}</b><br>R$ ${p.price.toFixed(2)}`; d.onclick = () => addToBudget(p); grid.appendChild(d);
                 }
             });
         }
-
         function addToBudget(p) {
-            const exist = budgetCart.find(x => x.id === p.id);
-            if(exist) exist.qty++;
-            else budgetCart.push({...p, qty: 1});
-            
-            document.getElementById('bud-search').value = '';
-            document.getElementById('bud-grid').innerHTML = '';
-            renderBudgetCart();
+            const exist = budgetCart.find(x => x.id === p.id); if(exist) exist.qty++; else budgetCart.push({...p, qty: 1});
+            document.getElementById('bud-search').value = ''; document.getElementById('bud-grid').innerHTML = ''; renderBudgetCart();
         }
-
-        function updateBudgetQty(id, val) {
-            const item = budgetCart.find(x => x.id === id);
-            if(item) {
-                item.qty = parseInt(val);
-                if(item.qty <= 0) removeFromBudget(id);
-                else renderBudgetCart();
-            }
-        }
-
-        function removeFromBudget(id) {
-            budgetCart = budgetCart.filter(x => x.id !== id);
-            renderBudgetCart();
-        }
-
+        function updateBudgetQty(id, val) { const item = budgetCart.find(x => x.id === id); if(item) { item.qty = parseInt(val); if(item.qty <= 0) removeFromBudget(id); else renderBudgetCart(); } }
+        function removeFromBudget(id) { budgetCart = budgetCart.filter(x => x.id !== id); renderBudgetCart(); }
         function renderBudgetCart() {
-            const list = document.getElementById('budget-items-list');
-            list.innerHTML = '';
+            const list = document.getElementById('budget-items-list'); list.innerHTML = '';
             if(budgetCart.length === 0) { list.innerHTML = '<div style="padding:10px;text-align:center;color:#999">Nenhum item</div>'; return; }
-
             budgetCart.forEach(i => {
-                let price = i.price;
-                let note = '';
-                if(i.bulkMin > 0 && i.qty >= i.bulkMin) { price = i.bulkPrice; note = ' (Atacado)'; }
-                
-                list.innerHTML += `
-                    <div class="bud-item">
-                        <div style="flex:2"><b>${i.name}</b>${note}</div>
-                        <div style="flex:1; text-align:right">R$ ${(price*i.qty).toFixed(2)}</div>
-                        <input type="number" value="${i.qty}" onchange="updateBudgetQty(${i.id}, this.value)">
-                        <button onclick="removeFromBudget(${i.id})" style="color:red;border:none;background:none;margin-left:5px">x</button>
-                    </div>
-                `;
+                let price = i.price; let note = ''; if(i.bulkMin > 0 && i.qty >= i.bulkMin) { price = i.bulkPrice; note = ' (Atacado)'; }
+                list.innerHTML += `<div class="bud-item"><div style="flex:2"><b>${i.name}</b>${note}</div><div style="flex:1; text-align:right">R$ ${(price*i.qty).toFixed(2)}</div><input type="number" value="${i.qty}" onchange="updateBudgetQty(${i.id}, this.value)"><button onclick="removeFromBudget(${i.id})" style="color:red;border:none;background:none;margin-left:5px">x</button></div>`;
             });
         }
-
         function generateBudget() {
-            let text = `*ORÇAMENTO - STUDIO NBV*\n----------------------------\n`;
-            let total = 0;
-
+            let text = `*ORÇAMENTO - STUDIO NBV*\n----------------------------\n`; let total = 0;
             if(budgetCart.length === 0 && parseFloat(document.getElementById('bud-files').value) === 0) return alert('Adicione itens!');
-
             budgetCart.forEach(i => {
-                let price = i.price;
-                if(i.bulkMin > 0 && i.qty >= i.bulkMin) price = i.bulkPrice;
-                const sub = i.qty * price;
-                total += sub;
+                let price = i.price; if(i.bulkMin > 0 && i.qty >= i.bulkMin) price = i.bulkPrice;
+                const sub = i.qty * price; total += sub;
                 text += `▪ ${i.qty}x *${i.name}*\n   R$ ${price.toFixed(2)} un. = R$ ${sub.toFixed(2)}\n`;
             });
-
-            const entry = parseFloat(document.getElementById('bud-entry').value) || 0;
-            const files = parseFloat(document.getElementById('bud-files').value) || 0;
-
+            const entry = parseFloat(document.getElementById('bud-entry').value) || 0; const files = parseFloat(document.getElementById('bud-files').value) || 0;
             if(files > 0) { text += `▪ Arquivos Digitais: R$ ${files.toFixed(2)}\n`; total += files; }
-
             text += `----------------------------\n*TOTAL: R$ ${total.toFixed(2)}*\n`;
-
-            if(entry > 0) {
-                text += `Entrada: R$ ${entry.toFixed(2)}\n`;
-                text += `*Restante: R$ ${(total - entry).toFixed(2)}*\n`;
-            }
-
+            if(entry > 0) { text += `Entrada: R$ ${entry.toFixed(2)}\n`; text += `*Restante: R$ ${(total - entry).toFixed(2)}*\n`; }
             text += `\n_Deseja confirmar o pedido?_`;
-            navigator.clipboard.writeText(text);
-            alert('Copiado!');
+            navigator.clipboard.writeText(text); alert('Copiado!');
         }
 
         // --- CLIENTES ---
         function addClient(isQuick) {
-            const prefix = isQuick ? 'qc' : 'c';
-            const name = document.getElementById(prefix+'-name').value;
-            const phone = document.getElementById(prefix+'-phone').value;
-            const addr = document.getElementById(prefix+'-addr').value;
+            const name = document.getElementById(isQuick?'qc-name':'c-name').value;
             if(!name) return alert('Nome é obrigatório');
-
             if(editingClientId && !isQuick) {
-                const client = db.clients.find(c => c.id === editingClientId);
-                if(client) { client.name = name; client.phone = phone; client.addr = addr; }
+                const c = db.clients.find(x => x.id === editingClientId);
+                if(c) { c.name = name; c.phone = document.getElementById('c-phone').value; c.addr = document.getElementById('c-addr').value; }
                 cancelClientEdit();
             } else {
-                const newClient = {id: Date.now(), name, phone, addr};
-                db.clients.push(newClient);
-                if(isQuick) { saveData(); renderClientSelect(); document.getElementById('checkout-client').value = newClient.id; toggleQuickClient(); }
+                const nc = {id: Date.now(), name, phone: document.getElementById(isQuick?'qc-phone':'c-phone').value, addr: document.getElementById(isQuick?'qc-addr':'c-addr').value};
+                db.clients.push(nc);
+                if(isQuick) { saveData(); renderClientSelect(); document.getElementById('checkout-client').value = nc.id; toggleQuickClient(); }
             }
-            if(!isQuick) { saveData(); renderAll(); document.getElementById(prefix+'-name').value = ''; }
+            if(!isQuick) { saveData(); renderAll(); document.getElementById('c-name').value=''; document.getElementById('c-phone').value=''; document.getElementById('c-addr').value=''; }
         }
+        function startClientEdit(id) { const c = db.clients.find(x=>x.id===id); if(!c)return; document.getElementById('c-name').value=c.name; document.getElementById('c-phone').value=c.phone||''; document.getElementById('c-addr').value=c.addr||''; editingClientId=id; document.getElementById('btn-save-client').innerText="Atualizar"; document.getElementById('btn-cancel-client').style.display='block'; }
+        function cancelClientEdit() { editingClientId=null; document.getElementById('c-name').value=''; document.getElementById('c-phone').value=''; document.getElementById('c-addr').value=''; document.getElementById('btn-save-client').innerText="Salvar"; document.getElementById('btn-cancel-client').style.display='none'; }
+        function deleteClient(id) { if(confirm('Excluir?')) { db.clients = db.clients.filter(c=>c.id!==id); saveData(); renderAll(); } }
+        function toggleQuickClient() { const f = document.getElementById('quick-client-form'); f.style.display = f.style.display==='block'?'none':'block'; }
 
-        function startClientEdit(id) {
-            const c = db.clients.find(x => x.id === id); if(!c) return;
-            document.getElementById('c-name').value = c.name;
-            document.getElementById('c-phone').value = c.phone || '';
-            document.getElementById('c-addr').value = c.addr || '';
-            editingClientId = id;
-            document.getElementById('btn-save-client').innerText = "Atualizar Cliente";
-            document.getElementById('btn-cancel-client').style.display = 'block';
-        }
-
-        function cancelClientEdit() {
-            editingClientId = null;
-            document.getElementById('c-name').value = '';
-            document.getElementById('c-phone').value = '';
-            document.getElementById('c-addr').value = '';
-            document.getElementById('btn-save-client').innerText = "Salvar Cliente";
-            document.getElementById('btn-cancel-client').style.display = 'none';
-        }
-
-        function deleteClient(id) { if(confirm('Tem certeza?')) { db.clients = db.clients.filter(c => c.id !== id); saveData(); renderAll(); } }
-        function toggleQuickClient() { const f = document.getElementById('quick-client-form'); f.style.display = f.style.display === 'block' ? 'none' : 'block'; }
-        
+        // --- RENDER & CART ---
         function renderAll() {
             const term = document.getElementById('search').value.toLowerCase();
             const grid = document.getElementById('grid'); grid.innerHTML = '';
             db.products.forEach(p => {
                 if(p.name.toLowerCase().includes(term) || (p.code && p.code.includes(term))) {
-                    const hasBulk = p.bulkMin > 0;
-                    const d = document.createElement('div');
-                    d.className = 'card';
-                    d.innerHTML = `${hasBulk ? `<span class="badge-bulk">>${p.bulkMin}</span>` : ''}<b>${p.name}</b><br>R$ ${p.price.toFixed(2)}`;
-                    d.onclick = () => addToCart(p);
-                    grid.appendChild(d);
+                    const d = document.createElement('div'); d.className = 'card';
+                    d.innerHTML = `${p.bulkMin>0?`<span class="badge-bulk">>${p.bulkMin}</span>`:''}<b>${p.name}</b><br>R$ ${p.price.toFixed(2)}`;
+                    d.onclick = () => addToCart(p); grid.appendChild(d);
                 }
             });
-            document.getElementById('p-list').innerHTML = db.products.map(p => `
-                <div style="display:flex; justify-content:space-between; padding:5px; border-bottom:1px solid #eee;">
-                    <span>${p.name} (${p.code}) - R$ ${p.price.toFixed(2)}</span>
-                    <div>
-                        <button onclick="startProductEdit(${p.id})">✎</button>
-                        <button onclick="del('products',${p.id})" style="color:red">🗑️</button>
-                    </div>
-                </div>
-            `).join('');
-            
-            const clList = document.getElementById('c-list');
-            clList.innerHTML = db.clients.map(c => `
-                <div class="client-item">
-                    <div><strong>${c.name}</strong><br><small>${c.phone || '-'} | ${c.addr || '-'}</small></div>
-                    <div class="client-actions"><button onclick="startClientEdit(${c.id})">✎</button><button onclick="deleteClient(${c.id})" style="color:red;">🗑️</button></div>
-                </div>
-            `).join('');
+            document.getElementById('p-list').innerHTML = db.products.map(p => `<div style="display:flex;justify-content:space-between;padding:5px;border-bottom:1px solid #eee;"><span>${p.name} (${p.code}) - R$ ${p.price.toFixed(2)}</span><div><button onclick="startProductEdit(${p.id})">✎</button><button onclick="del('products',${p.id})" style="color:red">🗑️</button></div></div>`).join('');
+            document.getElementById('c-list').innerHTML = db.clients.map(c => `<div class="client-item"><div><strong>${c.name}</strong><br><small>${c.phone||'-'}</small></div><div class="client-actions"><button onclick="startClientEdit(${c.id})">✎</button><button onclick="deleteClient(${c.id})" style="color:red;">🗑️</button></div></div>`).join('');
         }
         function del(type, id) { if(confirm('Apagar?')) { db[type] = db[type].filter(x => x.id !== id); saveData(); renderAll(); } }
 
-        function addToCart(p) { const ex = cart.find(x => x.id === p.id); if(ex) updateQty(cart.indexOf(ex), ex.qty + 1); else { cart.push({...p, qty: 1, currentPrice: p.price}); renderCart(); } }
+        function addToCart(p, qtyToAdd = 1) {
+            const ex = cart.find(x => x.id === p.id);
+            if(ex) {
+                // Se já existe, pega a quantidade atual e soma a nova
+                updateQty(cart.indexOf(ex), ex.qty + qtyToAdd);
+            } else {
+                // Se é novo, calcula o preço inicial (já verificando atacado para a qtd inicial)
+                let initialPrice = p.price;
+                if(p.bulkMin > 0 && qtyToAdd >= p.bulkMin) initialPrice = p.bulkPrice;
+                cart.push({...p, qty: qtyToAdd, currentPrice: initialPrice});
+                renderCart();
+            }
+        }
+
         function updateQty(idx, newQty) {
             newQty = parseInt(newQty); if(newQty < 1) return;
             const item = cart[idx]; const original = db.products.find(p => p.id === item.id); item.qty = newQty;
@@ -666,6 +513,7 @@
             document.getElementById('total').innerText = total.toFixed(2);
         }
 
+        // --- CHECKOUT ---
         let finalTotal = 0;
         function openCheckout() {
             if(!cart.length) return alert('Carrinho vazio');
