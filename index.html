@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Studio NBV - PDV 12.0 (Precision)</title>
+    <title>Studio NBV - PDV 13.0 (Full Suite)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         :root { 
@@ -53,8 +53,14 @@
         .payment-row input { flex: 1; }
         .pix-check-label { font-size: 10px; display: flex; flex-direction: column; align-items: center; line-height: 1; cursor: pointer; }
 
-        .client-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #eee; background: white; }
-        .history-item { background: white; padding: 15px; margin-bottom: 10px; border-radius: 5px; border-left: 5px solid var(--accent); box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; }
+        .client-item, .history-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #eee; background: white; margin-bottom: 5px; }
+        .history-item { border-left: 5px solid var(--accent); box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+
+        /* Estilo Lista Orçamento */
+        .budget-row { display: flex; align-items: center; padding: 5px; border-bottom: 1px solid #eee; }
+        .budget-row:hover { background: #f9f9f9; }
+        .budget-row input[type="checkbox"] { width: auto; margin-right: 10px; transform: scale(1.2); }
+        .budget-row input[type="number"] { width: 70px; padding: 5px; margin-left: auto; text-align: center; }
 
         /* IMPRESSÃO */
         @media print {
@@ -70,21 +76,19 @@
             .rec-line { border-bottom: 2px dashed #000; margin: 5px 0; }
             .rec-header, .rec-footer { text-align: center; white-space: pre-wrap; margin-bottom: 10px; }
             .rec-total { font-size: calc(var(--print-font) + 4px); text-align: right; margin-top: 5px; }
-            #qrcode img { margin: 5px auto; display: block; width: 100%; max-width: 80px; /* Forçado 80px */ }
+            #qrcode img { margin: 5px auto; display: block; width: 100%; max-width: 80px; }
             @page { size: 58mm auto; margin: 0; }
         }
-
-        /* Shortcuts Hint */
-        .shortcuts-hint { position: fixed; bottom: 10px; right: 10px; font-size: 10px; color: #888; background: rgba(255,255,255,0.8); padding: 5px; border-radius: 5px; pointer-events: none; }
     </style>
 </head>
 <body>
 
     <div id="sidebar">
-        <button class="nav-btn active" onclick="nav('pdv')">🛒</button>
-        <button class="nav-btn" onclick="nav('products')">📦</button>
-        <button class="nav-btn" onclick="nav('clients')">👥</button>
-        <button class="nav-btn" onclick="nav('history')">📜</button>
+        <button class="nav-btn active" onclick="nav('pdv')" title="Caixa">🛒</button>
+        <button class="nav-btn" onclick="nav('products')" title="Produtos">📦</button>
+        <button class="nav-btn" onclick="nav('clients')" title="Clientes">👥</button>
+        <button class="nav-btn" onclick="nav('budget')" title="Orçamentos">📝</button>
+        <button class="nav-btn" onclick="nav('history')" title="Histórico">📜</button>
         <div class="nav-bottom"><button class="nav-btn" onclick="openConfig()">⚙️</button></div>
     </div>
 
@@ -118,7 +122,10 @@
                     <div class="form-group" style="flex:1"><label>Novo Preço:</label><input id="p-bulk-price" type="number" step="0.01"></div>
                 </div>
             </div>
-            <button class="btn" onclick="addProduct()">Salvar Produto</button>
+            <div class="row-inputs">
+                <button class="btn" style="flex:1" onclick="addProduct()">Salvar Produto</button>
+                <button class="btn" style="flex:1; background: var(--accent)" onclick="openImportModal()">⚡ Importar em Lote</button>
+            </div>
             <hr><div id="p-list"></div>
         </div>
 
@@ -136,10 +143,50 @@
             <hr><div id="c-list"></div>
         </div>
 
+        <div id="budget" class="panel">
+            <h2>Gerador de Orçamento (WhatsApp)</h2>
+            <p style="color:#666; font-size:12px">Selecione os itens para gerar o texto do orçamento.</p>
+            
+            <div style="background: white; padding: 10px; border-radius: 8px; max-height: 400px; overflow-y: auto; border: 1px solid #ddd;">
+                <div id="budget-product-list"></div>
+            </div>
+
+            <div style="margin-top: 15px; background: #eef2f5; padding: 10px; border-radius: 8px;">
+                <h4>Adicionais</h4>
+                <div class="row-inputs">
+                    <div class="form-group" style="flex:1">
+                        <label>Valor Entrada (R$):</label>
+                        <input type="number" id="bud-entry" placeholder="0.00" step="0.01">
+                    </div>
+                    <div class="form-group" style="flex:1">
+                        <label>Valor Arquivos (R$):</label>
+                        <input type="number" id="bud-files" placeholder="0.00" step="0.01">
+                    </div>
+                </div>
+            </div>
+
+            <button class="btn" style="width:100%; margin-top: 15px; background: #25D366; border: none;" onclick="generateBudget()">
+                📲 Copiar para WhatsApp
+            </button>
+        </div>
+
         <div id="history" class="panel">
             <h2>Histórico</h2>
             <button class="btn" onclick="loadData()">🔄 Atualizar</button>
             <hr><div id="h-list"></div>
+        </div>
+    </div>
+
+    <div id="import-modal" class="modal">
+        <div class="modal-content">
+            <h3>⚡ Importar Produtos em Lote</h3>
+            <p style="font-size:12px">Cole abaixo no formato: <b>CÓDIGO, NOME, PREÇO, QTD_ATACADO, PREÇO_ATACADO</b><br>
+            Exemplo: <i>1015, Foto 10x15, 5.00, 10, 3.50</i></p>
+            <textarea id="import-text" rows="10" style="width:100%; padding:10px; border:1px solid #ccc"></textarea>
+            <div class="row-inputs" style="margin-top:10px;">
+                <button class="btn" style="background:#ccc" onclick="document.getElementById('import-modal').style.display='none'">Cancelar</button>
+                <button class="btn" onclick="processImport()">Importar Agora</button>
+            </div>
         </div>
     </div>
 
@@ -192,7 +239,7 @@
             </div>
 
             <div class="form-group">
-                <label>Total a Pagar: R$ <span id="checkout-final" style="font-size:1.2em;color:var(--success)">0.00</span></label>
+                <label>Total Final: R$ <span id="checkout-final" style="font-size:1.2em;color:var(--success)">0.00</span></label>
                 <div id="payment-list"></div>
                 <button class="btn" style="background:#ddd; color:#000; width:100%; margin-top:5px;" onclick="addPaymentRow()">+ Add Pagamento</button>
             </div>
@@ -242,15 +289,10 @@
         </div>
         <div id="rec-footer" class="rec-footer" style="font-size:10px; margin-top:10px;"></div>
     </div>
-    
-    <div class="shortcuts-hint">F2:Busca | F4:Checkout | F8:Confirmar | ESC:Sair</div>
 
     <script>
         // --- CORE ---
-        let db = { 
-            products: [], clients: [], sales: [], 
-            settings: { printWidth: '48mm', printFont: '12px', pixKey: '', payMethods: 'Pix,Dinheiro,Cartão', headerText: 'STUDIO NBV', footerText: 'Obrigado!' } 
-        };
+        let db = { products: [], clients: [], sales: [], settings: { printWidth: '48mm', printFont: '12px', pixKey: '', payMethods: 'Pix,Dinheiro,Cartão', headerText: 'STUDIO NBV', footerText: 'Obrigado!' } };
         let cart = [];
         let auth = JSON.parse(localStorage.getItem('nbv_auth')) || { user: '', repo: '', token: '' };
         let fileSha = '';
@@ -308,6 +350,7 @@
             if(t) t.style.display = (id === 'pdv') ? 'flex' : 'block';
             document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
             if(id === 'history') renderHistory();
+            if(id === 'budget') renderBudgetPage();
         }
 
         function openConfig() { 
@@ -325,11 +368,7 @@
         }
 
         function saveConfig() {
-            auth = {
-                user: document.getElementById('gh-user').value.trim(),
-                repo: document.getElementById('gh-repo').value.trim(),
-                token: document.getElementById('gh-token').value.trim()
-            };
+            auth = { user: document.getElementById('gh-user').value.trim(), repo: document.getElementById('gh-repo').value.trim(), token: document.getElementById('gh-token').value.trim() };
             localStorage.setItem('nbv_auth', JSON.stringify(auth));
             db.settings = {
                 printWidth: document.getElementById('cfg-print-width').value.trim() || '48mm',
@@ -339,36 +378,25 @@
                 headerText: document.getElementById('cfg-header').value,
                 footerText: document.getElementById('cfg-footer').value
             };
-            applySettings();
-            document.getElementById('config-modal').style.display = 'none';
-            saveData(); loadData();
+            applySettings(); document.getElementById('config-modal').style.display = 'none'; saveData(); loadData();
         }
 
-        // --- ATALHOS & EVENTOS ---
         document.addEventListener('keydown', function(e) {
             if (e.key === 'F2') { e.preventDefault(); nav('pdv'); document.getElementById('search').focus(); }
             if (e.key === 'F4') { e.preventDefault(); openCheckout(); }
             if (e.key === 'F8') { e.preventDefault(); if(document.getElementById('checkout-modal').style.display === 'flex') finishOrder(); }
-            if (e.key === 'Escape') { 
-                document.getElementById('checkout-modal').style.display = 'none';
-                document.getElementById('config-modal').style.display = 'none';
-            }
+            if (e.key === 'Escape') { document.getElementById('checkout-modal').style.display = 'none'; document.getElementById('config-modal').style.display = 'none'; document.getElementById('import-modal').style.display = 'none'; }
         });
 
-        // Search Bar Enter -> Add
         document.getElementById('search').addEventListener('keydown', function(e) {
             if(e.key === 'Enter') {
                 const term = this.value.toLowerCase();
                 const exact = db.products.find(p => (p.code && p.code.toLowerCase() === term) || p.name.toLowerCase() === term);
-                if(exact) {
-                    addToCart(exact);
-                    this.value = '';
-                    renderGrid(); // Reset grid visual
-                }
+                if(exact) { addToCart(exact); this.value = ''; renderGrid(); }
             }
         });
 
-        // --- PRODUTOS & CLIENTES ---
+        // --- PRODUTOS ---
         function addProduct() {
             const name = document.getElementById('p-name').value;
             const price = parseFloat(document.getElementById('p-price').value);
@@ -378,17 +406,130 @@
                     bulkMin: parseInt(document.getElementById('p-bulk-min').value)||0,
                     bulkPrice: parseFloat(document.getElementById('p-bulk-price').value)||0
                 });
-                saveData(); renderAll();
-                document.getElementById('p-name').value = '';
+                saveData(); renderAll(); document.getElementById('p-name').value = '';
             }
         }
 
+        // --- IMPORTAÇÃO EM LOTE ---
+        function openImportModal() { document.getElementById('import-modal').style.display = 'flex'; }
+        
+        function processImport() {
+            const text = document.getElementById('import-text').value;
+            const lines = text.split('\n');
+            let count = 0;
+            
+            lines.forEach(line => {
+                const parts = line.split(',').map(s => s.trim());
+                if(parts.length >= 2) {
+                    const code = parts[0];
+                    const name = parts[1];
+                    const price = parseFloat(parts[2]);
+                    if(name && !isNaN(price)) {
+                        db.products.push({
+                            id: Date.now() + Math.random(), // Evita ID duplicado rapido
+                            code: code,
+                            name: name,
+                            price: price,
+                            bulkMin: parseInt(parts[3]) || 0,
+                            bulkPrice: parseFloat(parts[4]) || 0
+                        });
+                        count++;
+                    }
+                }
+            });
+            
+            if(count > 0) {
+                saveData(); renderAll();
+                alert(count + ' produtos importados!');
+                document.getElementById('import-modal').style.display = 'none';
+                document.getElementById('import-text').value = '';
+            } else {
+                alert('Nenhum produto válido encontrado. Use o formato: Codigo, Nome, Preço');
+            }
+        }
+
+        // --- ORÇAMENTOS (NOVA LÓGICA) ---
+        function renderBudgetPage() {
+            const container = document.getElementById('budget-product-list');
+            container.innerHTML = '';
+            db.products.forEach(p => {
+                container.innerHTML += `
+                    <div class="budget-row">
+                        <input type="checkbox" class="bud-check" data-id="${p.id}">
+                        <div style="flex:1"><b>${p.name}</b> (R$ ${p.price.toFixed(2)}) ${p.bulkMin>0 ? '<small style="color:var(--accent)">Atacado >'+p.bulkMin+'</small>' : ''}</div>
+                        <input type="number" class="bud-qty" min="1" placeholder="Qtd" disabled onchange="updateBudgetRow(this)">
+                    </div>
+                `;
+            });
+            
+            // Event Listeners para habilitar input
+            document.querySelectorAll('.bud-check').forEach(chk => {
+                chk.addEventListener('change', (e) => {
+                    const row = e.target.parentElement;
+                    const input = row.querySelector('.bud-qty');
+                    input.disabled = !e.target.checked;
+                    if(!e.target.checked) input.value = '';
+                    else input.focus();
+                });
+            });
+        }
+
+        function generateBudget() {
+            let text = `*ORÇAMENTO - STUDIO NBV*\n----------------------------\n`;
+            let total = 0;
+            let hasItems = false;
+
+            document.querySelectorAll('.budget-row').forEach(row => {
+                const check = row.querySelector('.bud-check');
+                const input = row.querySelector('.bud-qty');
+                
+                if(check.checked && input.value > 0) {
+                    hasItems = true;
+                    const p = db.products.find(x => x.id == check.dataset.id);
+                    const qty = parseInt(input.value);
+                    
+                    let price = p.price;
+                    let note = "";
+                    if(p.bulkMin > 0 && qty >= p.bulkMin) {
+                        price = p.bulkPrice;
+                        note = " (Promo Atacado)";
+                    }
+                    
+                    const sub = qty * price;
+                    total += sub;
+                    text += `▪ ${qty}x *${p.name}*\n   R$ ${price.toFixed(2)} un. = R$ ${sub.toFixed(2)}${note}\n`;
+                }
+            });
+
+            const entry = parseFloat(document.getElementById('bud-entry').value) || 0;
+            const files = parseFloat(document.getElementById('bud-files').value) || 0;
+
+            if(files > 0) {
+                text += `▪ Arquivos Digitais: R$ ${files.toFixed(2)}\n`;
+                total += files;
+            }
+
+            text += `----------------------------\n*TOTAL: R$ ${total.toFixed(2)}*\n`;
+
+            if(entry > 0) {
+                text += `Entrada: R$ ${entry.toFixed(2)}\n`;
+                text += `*Restante: R$ ${(total - entry).toFixed(2)}*\n`;
+            }
+
+            text += `\n_Deseja confirmar o pedido?_`;
+
+            if(!hasItems && files === 0) return alert('Selecione algum item!');
+
+            navigator.clipboard.writeText(text);
+            alert('Orçamento copiado para a área de transferência!');
+        }
+
+        // --- CLIENTES ---
         function addClient(isQuick) {
             const prefix = isQuick ? 'qc' : 'c';
             const name = document.getElementById(prefix+'-name').value;
             const phone = document.getElementById(prefix+'-phone').value;
             const addr = document.getElementById(prefix+'-addr').value;
-
             if(!name) return alert('Nome é obrigatório');
 
             if(editingClientId && !isQuick) {
@@ -404,8 +545,7 @@
         }
 
         function startClientEdit(id) {
-            const c = db.clients.find(x => x.id === id);
-            if(!c) return;
+            const c = db.clients.find(x => x.id === id); if(!c) return;
             document.getElementById('c-name').value = c.name;
             document.getElementById('c-phone').value = c.phone || '';
             document.getElementById('c-addr').value = c.addr || '';
@@ -423,10 +563,7 @@
             document.getElementById('btn-cancel-client').style.display = 'none';
         }
 
-        function deleteClient(id) {
-            if(confirm('Tem certeza?')) { db.clients = db.clients.filter(c => c.id !== id); saveData(); renderAll(); }
-        }
-
+        function deleteClient(id) { if(confirm('Tem certeza?')) { db.clients = db.clients.filter(c => c.id !== id); saveData(); renderAll(); } }
         function toggleQuickClient() { const f = document.getElementById('quick-client-form'); f.style.display = f.style.display === 'block' ? 'none' : 'block'; }
         
         function renderAll() {
@@ -448,68 +585,40 @@
             clList.innerHTML = db.clients.map(c => `
                 <div class="client-item">
                     <div><strong>${c.name}</strong><br><small>${c.phone || '-'} | ${c.addr || '-'}</small></div>
-                    <div class="client-actions">
-                        <button onclick="startClientEdit(${c.id})">✎</button>
-                        <button onclick="deleteClient(${c.id})" style="color:red;">🗑️</button>
-                    </div>
+                    <div class="client-actions"><button onclick="startClientEdit(${c.id})">✎</button><button onclick="deleteClient(${c.id})" style="color:red;">🗑️</button></div>
                 </div>
             `).join('');
         }
         function del(type, id) { if(confirm('Apagar?')) { db[type] = db[type].filter(x => x.id !== id); saveData(); renderAll(); } }
 
-        // --- CARRINHO ---
-        function addToCart(p) {
-            const ex = cart.find(x => x.id === p.id);
-            if(ex) updateQty(cart.indexOf(ex), ex.qty + 1);
-            else { cart.push({...p, qty: 1, currentPrice: p.price}); renderCart(); }
-        }
+        function addToCart(p) { const ex = cart.find(x => x.id === p.id); if(ex) updateQty(cart.indexOf(ex), ex.qty + 1); else { cart.push({...p, qty: 1, currentPrice: p.price}); renderCart(); } }
         function updateQty(idx, newQty) {
-            newQty = parseInt(newQty);
-            if(newQty < 1) return;
-            const item = cart[idx];
-            const original = db.products.find(p => p.id === item.id);
-            item.qty = newQty;
-            if(original && original.bulkMin > 0 && newQty >= original.bulkMin) item.currentPrice = original.bulkPrice;
-            else item.currentPrice = original ? original.price : item.price;
+            newQty = parseInt(newQty); if(newQty < 1) return;
+            const item = cart[idx]; const original = db.products.find(p => p.id === item.id); item.qty = newQty;
+            if(original && original.bulkMin > 0 && newQty >= original.bulkMin) item.currentPrice = original.bulkPrice; else item.currentPrice = original ? original.price : item.price;
             renderCart();
         }
         function renderCart() {
-            const list = document.getElementById('cart-list'); list.innerHTML = '';
-            let total = 0;
+            const list = document.getElementById('cart-list'); list.innerHTML = ''; let total = 0;
             cart.forEach((i, idx) => {
                 total += i.qty * i.currentPrice;
-                const orig = db.products.find(p => p.id === i.id);
-                const isBulk = orig && orig.bulkMin > 0 && i.qty >= orig.bulkMin;
-                list.innerHTML += `<div class="cart-item">
-                    <div style="flex:2"><b>${i.name}</b>${isBulk ? ' <small style="color:orange">*</small>' : ''}</div>
-                    <div style="flex:1"><input type="number" value="${i.qty}" style="width:40px" onchange="updateQty(${idx},this.value)"></div>
-                    <div style="flex:1;text-align:right">R$ ${(i.qty*i.currentPrice).toFixed(2)} <span onclick="cart.splice(${idx},1);renderCart()" style="color:red;cursor:pointer">x</span></div>
-                </div>`;
+                const orig = db.products.find(p => p.id === i.id); const isBulk = orig && orig.bulkMin > 0 && i.qty >= orig.bulkMin;
+                list.innerHTML += `<div class="cart-item"><div style="flex:2"><b>${i.name}</b>${isBulk ? ' <small style="color:orange">*</small>' : ''}</div><div style="flex:1"><input type="number" value="${i.qty}" style="width:40px" onchange="updateQty(${idx},this.value)"></div><div style="flex:1;text-align:right">R$ ${(i.qty*i.currentPrice).toFixed(2)} <span onclick="cart.splice(${idx},1);renderCart()" style="color:red;cursor:pointer">x</span></div></div>`;
             });
             document.getElementById('total').innerText = total.toFixed(2);
         }
 
-        // --- CHECKOUT ---
         let finalTotal = 0;
         function openCheckout() {
             if(!cart.length) return alert('Carrinho vazio');
             document.getElementById('checkout-modal').style.display = 'flex';
-            renderClientSelect();
-            document.getElementById('payment-list').innerHTML = '';
-            document.getElementById('disc-val').value = 0;
-            document.getElementById('gallery-link').value = '';
-            document.getElementById('pix-display').style.display = 'none';
-            document.getElementById('change-display').style.display = 'none';
+            renderClientSelect(); document.getElementById('payment-list').innerHTML = '';
+            document.getElementById('disc-val').value = 0; document.getElementById('gallery-link').value = '';
+            document.getElementById('pix-display').style.display = 'none'; document.getElementById('change-display').style.display = 'none';
             calcTotal(); addPaymentRow(); 
         }
         function closeCheckout() { document.getElementById('checkout-modal').style.display = 'none'; }
-        
-        function renderClientSelect() {
-            const sel = document.getElementById('checkout-client');
-            sel.innerHTML = '<option value="">Consumidor Final</option>';
-            db.clients.forEach(c => sel.innerHTML += `<option value="${c.id}">${c.name}</option>`);
-        }
-        
+        function renderClientSelect() { const sel = document.getElementById('checkout-client'); sel.innerHTML = '<option value="">Consumidor Final</option>'; db.clients.forEach(c => sel.innerHTML += `<option value="${c.id}">${c.name}</option>`); }
         function calcTotal() {
             const sub = parseFloat(document.getElementById('total').innerText);
             const dVal = parseFloat(document.getElementById('disc-val').value) || 0;
@@ -517,61 +626,35 @@
             let discount = (dType === '%') ? sub * (dVal/100) : dVal;
             finalTotal = Math.max(0, sub - discount);
             document.getElementById('checkout-final').innerText = finalTotal.toFixed(2);
-            updateChange(); // Recalc change if total changes
-            return finalTotal;
+            updateChange(); return finalTotal;
         }
-
         function updateChange() {
-            let currentPaid = 0;
-            document.querySelectorAll('.pay-amount').forEach(el => currentPaid += parseFloat(el.value)||0);
+            let currentPaid = 0; document.querySelectorAll('.pay-amount').forEach(el => currentPaid += parseFloat(el.value)||0);
             const change = currentPaid - finalTotal;
             const changeDisplay = document.getElementById('change-display');
-            if(change > 0) {
-                changeDisplay.style.display = 'block';
-                document.getElementById('change-val').innerText = change.toFixed(2);
-            } else {
-                changeDisplay.style.display = 'none';
-            }
+            if(change > 0) { changeDisplay.style.display = 'block'; document.getElementById('change-val').innerText = change.toFixed(2); } else { changeDisplay.style.display = 'none'; }
         }
-
         function addPaymentRow() {
-            // Auto-calculate remaining
-            let currentPaid = 0;
-            document.querySelectorAll('.pay-amount').forEach(el => currentPaid += parseFloat(el.value)||0);
+            let currentPaid = 0; document.querySelectorAll('.pay-amount').forEach(el => currentPaid += parseFloat(el.value)||0);
             const remaining = Math.max(0, finalTotal - currentPaid);
-
-            const div = document.createElement('div');
-            div.className = 'payment-row';
+            const div = document.createElement('div'); div.className = 'payment-row';
             const opts = db.settings.payMethods.split(',').map(m => `<option>${m.trim()}</option>`).join('');
-            
-            // onchange calls updatePixDisplay AND updateChange
-            div.innerHTML = `
-                <select class="pay-method" onchange="checkPixRow(this)">${opts}</select>
-                <input type="number" class="pay-amount" value="${remaining.toFixed(2)}" step="0.01" onchange="updatePixDisplay(); updateChange();">
-                <label class="pix-check-label" style="display:none"><input type="checkbox" class="pix-print"> 🖨️ Key</label>
-                <button onclick="this.parentElement.remove();updatePixDisplay();updateChange()" style="background:#c0392b;color:white;border:none;">x</button>
-            `;
+            div.innerHTML = `<select class="pay-method" onchange="checkPixRow(this)">${opts}</select><input type="number" class="pay-amount" value="${remaining.toFixed(2)}" step="0.01" onchange="updatePixDisplay(); updateChange();"><label class="pix-check-label" style="display:none"><input type="checkbox" class="pix-print"> 🖨️ Key</label><button onclick="this.parentElement.remove();updatePixDisplay();updateChange()" style="background:#c0392b;color:white;border:none;">x</button>`;
             document.getElementById('payment-list').appendChild(div);
-            checkPixRow(div.querySelector('.pay-method'));
-            updateChange();
+            checkPixRow(div.querySelector('.pay-method')); updateChange();
         }
-
         function checkPixRow(sel) {
             const isPix = sel.value.toLowerCase().includes('pix');
             sel.parentElement.querySelector('.pix-check-label').style.display = isPix ? 'flex' : 'none';
             updatePixDisplay();
         }
-
         function updatePixDisplay() {
             const pixRow = Array.from(document.querySelectorAll('.payment-row')).find(r => r.querySelector('.pay-method').value.toLowerCase().includes('pix'));
-            const display = document.getElementById('pix-display');
-            const key = db.settings.pixKey;
-            
+            const display = document.getElementById('pix-display'); const key = db.settings.pixKey;
             if(pixRow && key) {
                 const amt = pixRow.querySelector('.pay-amount').value;
                 const payload = createPixPayload(key, "Studio NBV", "Boa Ventura", amt, "NBV"+Date.now());
-                display.style.display = 'block';
-                display.setAttribute('data-code', payload);
+                display.style.display = 'block'; display.setAttribute('data-code', payload);
                 const qrDiv = document.getElementById('pix-qrcode-checkout'); qrDiv.innerHTML = '';
                 new QRCode(qrDiv, { text: payload, width: 100, height: 100 });
             } else { display.style.display = 'none'; }
@@ -579,100 +662,50 @@
         function copyPix() { navigator.clipboard.writeText(document.getElementById('pix-display').getAttribute('data-code')); alert('Copiado!'); }
 
         function finishOrder() {
-            const payRows = document.querySelectorAll('.payment-row');
-            if(payRows.length === 0) return alert('Adicione uma forma de pagamento!');
-
+            const payRows = document.querySelectorAll('.payment-row'); if(payRows.length === 0) return alert('Adicione pagamento');
             let payments = []; let pixPrintData = null; let currentPaid = 0;
-            
             payRows.forEach(r => {
-                const method = r.querySelector('.pay-method').value;
-                const val = parseFloat(r.querySelector('.pay-amount').value) || 0;
-                const printKey = r.querySelector('.pix-print').checked;
-                const key = db.settings.pixKey;
+                const method = r.querySelector('.pay-method').value; const val = parseFloat(r.querySelector('.pay-amount').value) || 0;
+                const printKey = r.querySelector('.pix-print').checked; const key = db.settings.pixKey;
                 if(val > 0) {
-                    currentPaid += val;
-                    payments.push({ method, val });
-                    if(method.toLowerCase().includes('pix') && printKey && key) {
-                        pixPrintData = { key: key, val: val };
-                    }
+                    currentPaid += val; payments.push({ method, val });
+                    if(method.toLowerCase().includes('pix') && printKey && key) pixPrintData = { key: key, val: val };
                 }
             });
-
-            if(payments.length === 0) return alert('Valor pago inválido.');
-
+            if(payments.length === 0) return alert('Valor inválido');
             const client = db.clients.find(c => c.id == document.getElementById('checkout-client').value);
             const change = Math.max(0, currentPaid - finalTotal);
-
             const sale = {
-                id: Date.now(),
-                date: new Date().toLocaleString('pt-BR'),
-                client: client ? client.name : 'Consumidor Final',
-                addr: client ? client.addr : '',
-                items: cart.map(i => ({...i, price: i.currentPrice})),
-                subtotal: parseFloat(document.getElementById('total').innerText),
-                discount: (parseFloat(document.getElementById('total').innerText) - finalTotal),
-                total: finalTotal,
-                paid: currentPaid,
-                change: change,
-                payments: payments,
-                link: document.getElementById('gallery-link').value,
-                pixPrint: pixPrintData,
-                header: db.settings.headerText,
-                footer: db.settings.footerText
+                id: Date.now(), date: new Date().toLocaleString('pt-BR'), client: client ? client.name : 'Consumidor Final', addr: client ? client.addr : '',
+                items: cart.map(i => ({...i, price: i.currentPrice})), subtotal: parseFloat(document.getElementById('total').innerText),
+                discount: (parseFloat(document.getElementById('total').innerText) - finalTotal), total: finalTotal, paid: currentPaid, change: change,
+                payments: payments, link: document.getElementById('gallery-link').value, pixPrint: pixPrintData,
+                header: db.settings.headerText, footer: db.settings.footerText
             };
             db.sales.push(sale); saveData(); printReceipt(sale); cart = []; renderCart(); closeCheckout();
         }
 
         function printReceipt(sale) {
-            document.getElementById('rec-header').innerText = sale.header;
-            document.getElementById('rec-footer').innerText = sale.footer;
+            document.getElementById('rec-header').innerText = sale.header; document.getElementById('rec-footer').innerText = sale.footer;
             document.getElementById('rec-meta').innerHTML = `Data: ${sale.date}<br>Cliente: ${sale.client}`;
             document.getElementById('rec-addr').innerText = sale.addr ? `End: ${sale.addr}` : '';
             document.getElementById('rec-items').innerHTML = sale.items.map(i => `<tr><td>${i.qty}x ${i.name}</td><td align="right">R$ ${(i.qty*i.price).toFixed(2)}</td></tr>`).join('');
-            document.getElementById('rec-sub').innerText = sale.subtotal.toFixed(2);
-            document.getElementById('rec-disc').innerText = sale.discount.toFixed(2);
+            document.getElementById('rec-sub').innerText = sale.subtotal.toFixed(2); document.getElementById('rec-disc').innerText = sale.discount.toFixed(2);
             document.getElementById('rec-total-val').innerText = sale.total.toFixed(2);
             document.getElementById('rec-payments').innerHTML = sale.payments.map(p => `<div>${p.method}: R$ ${p.val.toFixed(2)}</div>`).join('');
-            
             const recChange = document.getElementById('rec-change');
-            if(sale.change > 0) {
-                recChange.style.display = 'block';
-                recChange.innerText = `TROCO: R$ ${sale.change.toFixed(2)}`;
-            } else { recChange.style.display = 'none'; }
-
+            if(sale.change > 0) { recChange.style.display = 'block'; recChange.innerText = `TROCO: R$ ${sale.change.toFixed(2)}`; } else { recChange.style.display = 'none'; }
             const recPix = document.getElementById('rec-pix-area');
-            if(sale.pixPrint) {
-                recPix.style.display = 'block';
-                document.getElementById('rec-pix-key').innerText = sale.pixPrint.key;
-                document.getElementById('rec-pix-amount').innerText = `Valor a Pagar: R$ ${sale.pixPrint.val.toFixed(2)}`;
-            } else { recPix.style.display = 'none'; }
-
+            if(sale.pixPrint) { recPix.style.display = 'block'; document.getElementById('rec-pix-key').innerText = sale.pixPrint.key; document.getElementById('rec-pix-amount').innerText = `Valor: R$ ${sale.pixPrint.val.toFixed(2)}`; } else { recPix.style.display = 'none'; }
             const qrC = document.getElementById('qrcode'); qrC.innerHTML = '';
-            if(sale.link) {
-                document.getElementById('qr-area').style.display = 'block';
-                new QRCode(qrC, { text: sale.link, width: 80, height: 80 }); // Forçado 80px no Cupom
-            } else document.getElementById('qr-area').style.display = 'none';
+            if(sale.link) { document.getElementById('qr-area').style.display = 'block'; new QRCode(qrC, { text: sale.link, width: 80, height: 80 }); } else document.getElementById('qr-area').style.display = 'none';
             setTimeout(() => window.print(), 500);
         }
 
-        function deleteSale(id) {
-            if(confirm('Excluir este registro de venda?')) {
-                db.sales = db.sales.filter(s => s.id !== id);
-                saveData(); renderHistory();
-            }
-        }
-
+        function deleteSale(id) { if(confirm('Excluir?')) { db.sales = db.sales.filter(s => s.id !== id); saveData(); renderHistory(); } }
         function renderHistory() {
             const list = document.getElementById('h-list');
-            list.innerHTML = [...db.sales].sort((a,b)=>b.id-a.id).map(s => 
-                `<div class="history-item">
-                    <div><strong>${s.date}</strong> - ${s.client}<br>R$ ${s.total.toFixed(2)}</div>
-                    <div>
-                        <button class="btn" onclick='printReceipt(${JSON.stringify(s)})'>🖨️</button>
-                        <button class="btn" onclick='deleteSale(${s.id})' style="background:red;margin-left:5px;">🗑️</button>
-                    </div>
-                </div>`
-            ).join('');
+            list.innerHTML = [...db.sales].sort((a,b)=>b.id-a.id).map(s => `<div class="history-item"><div><strong>${s.date}</strong> - ${s.client}<br>R$ ${s.total.toFixed(2)}</div><div><button class="btn" onclick='printReceipt(${JSON.stringify(s)})'>🖨️</button><button class="btn" onclick='deleteSale(${s.id})' style="background:red;margin-left:5px;">🗑️</button></div></div>`).join('');
         }
 
         function normalizeStr(str) { return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9 ]/g, "").toUpperCase(); }
@@ -683,8 +716,7 @@
             let p = "00020126" + (14+cleanKey.length+4) + "0014BR.GOV.BCB.PIX01" + (cleanKey.length).toString().padStart(2,'0') + cleanKey;
             p += "520400005303986"; if(parseFloat(amount)>0) p += f("54", cleanAmount);
             p += "5802BR" + f("59",cleanName) + f("60",cleanCity) + f("62", f("05",cleanTxid)) + "6304";
-            let crc = 0xFFFF;
-            for(let i=0; i<p.length; i++) { crc ^= p.charCodeAt(i) << 8; for(let j=0; j<8; j++) crc = (crc & 0x8000) ? (crc << 1) ^ 0x1021 : crc << 1; }
+            let crc = 0xFFFF; for(let i=0; i<p.length; i++) { crc ^= p.charCodeAt(i) << 8; for(let j=0; j<8; j++) crc = (crc & 0x8000) ? (crc << 1) ^ 0x1021 : crc << 1; }
             return p + (crc & 0xFFFF).toString(16).toUpperCase().padStart(4,'0');
         }
 
