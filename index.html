@@ -3,16 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Studio NBV - PDV 5.0</title>
+    <title>Studio NBV - PDV 6.0 (Sync)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         :root { 
             --primary: #2c3e50; --accent: #e67e22; --success: #27ae60; --danger: #c0392b; 
+            /* Padrões iniciais (serão sobrescritos pelo banco de dados) */
             --print-width: 48mm; --print-font: 11px;
         }
         body { font-family: 'Segoe UI', sans-serif; margin: 0; background: #f4f4f4; display: flex; height: 100vh; overflow: hidden; }
         
-        /* Layout & UI Elements */
+        /* UI Layout */
         #sidebar { width: 80px; background: var(--primary); display: flex; flex-direction: column; align-items: center; padding-top: 20px; color: white; }
         .nav-btn { background: none; border: none; color: white; font-size: 24px; margin-bottom: 20px; cursor: pointer; transition: 0.3s; opacity: 0.7; }
         .nav-btn:hover, .nav-btn.active { opacity: 1; transform: scale(1.1); }
@@ -47,13 +48,12 @@
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); justify-content: center; align-items: center; z-index: 1000; }
         .modal-content { background: white; padding: 25px; border-radius: 8px; width: 500px; max-width: 95%; max-height: 90vh; overflow-y: auto; }
         
-        /* Payment Rows */
         .payment-row { display: flex; gap: 5px; margin-bottom: 5px; align-items: center; }
         .payment-row select { flex: 2; }
         .payment-row input { flex: 1; }
         .pix-check-label { font-size: 10px; display: flex; flex-direction: column; align-items: center; line-height: 1; cursor: pointer; }
 
-        /* Receipt Print CSS */
+        /* Impressão */
         @media print {
             body * { visibility: hidden; }
             #receipt, #receipt * { visibility: visible; }
@@ -135,12 +135,17 @@
     <div id="config-modal" class="modal">
         <div class="modal-content">
             <h3>⚙️ Configurações</h3>
-            <details style="margin-bottom:10px;"><summary>☁️ GitHub</summary>
+            <div style="font-size: 12px; color: #666; margin-bottom: 10px;">
+                As credenciais (Token) ficam neste navegador. As configurações abaixo são salvas na nuvem.
+            </div>
+
+            <details style="margin-bottom:10px;"><summary>☁️ Acesso GitHub (Local)</summary>
                 <div class="form-group"><input id="gh-user" placeholder="User"></div>
                 <div class="form-group"><input id="gh-repo" placeholder="Repo"></div>
                 <div class="form-group"><input type="password" id="gh-token" placeholder="Token"></div>
             </details>
-            <details style="margin-bottom:10px;"><summary>🖨️ Cupom Personalizado</summary>
+
+            <details style="margin-bottom:10px;" open><summary>🖨️ Loja & Impressão (Nuvem)</summary>
                 <div class="row-inputs">
                     <div class="form-group"><label>Largura (48mm):</label><input id="cfg-print-width"></div>
                     <div class="form-group"><label>Fonte (11px):</label><input id="cfg-print-font"></div>
@@ -148,10 +153,12 @@
                 <div class="form-group"><label>Cabeçalho do Cupom:</label><textarea id="cfg-header" rows="3"></textarea></div>
                 <div class="form-group"><label>Rodapé do Cupom:</label><textarea id="cfg-footer" rows="2"></textarea></div>
             </details>
-            <details style="margin-bottom:10px;"><summary>💳 Pagamento</summary>
+
+            <details style="margin-bottom:10px;"><summary>💳 Financeiro (Nuvem)</summary>
                 <div class="form-group"><label>Chave Pix:</label><input id="cfg-pix-key"></div>
                 <div class="form-group"><label>Meios (separar por ,):</label><input id="cfg-pay-methods"></div>
             </details>
+
             <button class="btn" style="width:100%" onclick="saveConfig()">Salvar Tudo</button>
         </div>
     </div>
@@ -163,6 +170,7 @@
                 <div style="flex:1"><label>Cliente:</label><select id="checkout-client"></select></div>
                 <button class="btn" onclick="toggleQuickClient()" title="Novo" style="padding:10px;">+</button>
             </div>
+            
             <div id="quick-client-form" style="display:none;background:#eee;padding:10px;margin-bottom:10px;">
                 <div class="form-group"><input id="qc-name" placeholder="Nome"></div>
                 <div class="form-group"><input id="qc-phone" placeholder="Zap"></div>
@@ -221,44 +229,53 @@
         <div id="qr-area" style="text-align:center; margin-top:10px; display:none;">
             <span>Acesse suas fotos:</span><div id="qrcode"></div>
         </div>
-        
         <div id="rec-footer" class="rec-footer" style="font-size:10px; margin-top:10px;"></div>
     </div>
 
     <script>
-        // --- CORE ---
-        let db = { products: [], clients: [], sales: [] };
-        let cart = [];
-        let config = JSON.parse(localStorage.getItem('nbv_config_v5')) || { 
-            printWidth: '48mm', printFont: '11px', pixKey: '', payMethods: 'Pix,Dinheiro,Cartão',
-            headerText: 'STUDIO NBV\nBoa Ventura de São Roque', footerText: 'Obrigado pela preferência!'
+        // --- ESTRUTURA DE DADOS ---
+        let db = { 
+            products: [], 
+            clients: [], 
+            sales: [],
+            // Configurações Padrão (serão sobrescritas pelo banco)
+            settings: {
+                printWidth: '48mm', printFont: '11px', pixKey: '', payMethods: 'Pix,Dinheiro,Cartão',
+                headerText: 'STUDIO NBV\nBoa Ventura de São Roque', footerText: 'Obrigado pela preferência!'
+            }
         };
+        let cart = [];
+        
+        // --- AUTH (Apenas isso fica no LocalStorage) ---
+        let auth = JSON.parse(localStorage.getItem('nbv_auth')) || { user: '', repo: '', token: '' };
         let fileSha = '';
 
-        // Apply visual settings
-        function applyStyles() {
-            document.documentElement.style.setProperty('--print-width', config.printWidth);
-            document.documentElement.style.setProperty('--print-font', config.printFont);
+        // --- CORE ---
+        function applySettings() {
+            // Aplica as configurações carregadas do DB
+            const s = db.settings;
+            document.documentElement.style.setProperty('--print-width', s.printWidth);
+            document.documentElement.style.setProperty('--print-font', s.printFont);
         }
-        applyStyles();
 
-        // --- GITHUB ---
         async function ghRequest(method, body = null) {
-            const { user, repo, token } = config;
-            if(!user || !repo || !token) return openConfig();
+            if(!auth.user || !auth.repo || !auth.token) return openConfig();
+            
             document.getElementById('loader').style.width = '50%';
             try {
-                const url = `https://api.github.com/repos/${user}/${repo}/contents/db.json`;
-                const headers = { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json' };
+                const url = `https://api.github.com/repos/${auth.user}/${auth.repo}/contents/db.json`;
+                const headers = { 'Authorization': `token ${auth.token}`, 'Accept': 'application/vnd.github.v3+json' };
                 const fetchUrl = method === 'GET' ? `${url}?t=${Date.now()}` : url;
                 const options = { method, headers, body: body ? JSON.stringify(body) : null };
+                
                 const res = await fetch(fetchUrl, options);
                 document.getElementById('loader').style.width = '100%';
                 setTimeout(()=>document.getElementById('loader').style.width='0%', 500);
+                
                 if (!res.ok) throw new Error(res.status);
                 return await res.json();
             } catch (e) {
-                alert('Erro GitHub: ' + e.message); return null;
+                alert('Erro na conexão GitHub. Verifique o Token.'); return null;
             }
         }
 
@@ -269,10 +286,20 @@
             const data = await ghRequest('GET');
             if (data) {
                 fileSha = data.sha;
-                db = JSON.parse(fromBase64(data.content));
-                if(!db.sales) db.sales = [];
-                // Migration
+                const remoteDb = JSON.parse(fromBase64(data.content));
+                
+                // Merge dos dados (mantendo compatibilidade)
+                db.products = remoteDb.products || [];
+                db.clients = remoteDb.clients || [];
+                db.sales = remoteDb.sales || [];
+                
+                // Carregar configurações da nuvem (se existirem), senão usa o padrão
+                if(remoteDb.settings) db.settings = remoteDb.settings;
+                
+                // Normaliza produtos
                 db.products = db.products.map(p => ({...p, bulkMin: p.bulkMin||0, bulkPrice: p.bulkPrice||0 }));
+                
+                applySettings(); // Aplica visual imediatamente
                 renderAll();
             }
         }
@@ -284,7 +311,7 @@
             if(res) fileSha = res.content.sha;
         }
 
-        // --- UI ---
+        // --- NAVEGAÇÃO E UI ---
         function nav(id) {
             document.querySelectorAll('.panel, .pdv-container').forEach(el => el.style.display = 'none');
             const t = document.getElementById(id);
@@ -294,23 +321,34 @@
         }
 
         function openConfig() { 
-            document.getElementById('gh-user').value = config.user || '';
-            document.getElementById('gh-repo').value = config.repo || '';
-            document.getElementById('gh-token').value = config.token || '';
-            document.getElementById('cfg-print-width').value = config.printWidth;
-            document.getElementById('cfg-print-font').value = config.printFont;
-            document.getElementById('cfg-pix-key').value = config.pixKey || '';
-            document.getElementById('cfg-pay-methods').value = config.payMethods;
-            document.getElementById('cfg-header').value = config.headerText;
-            document.getElementById('cfg-footer').value = config.footerText;
+            // Preencher Auth (Local)
+            document.getElementById('gh-user').value = auth.user || '';
+            document.getElementById('gh-repo').value = auth.repo || '';
+            document.getElementById('gh-token').value = auth.token || '';
+            
+            // Preencher Settings (Do DB/Memória)
+            const s = db.settings;
+            document.getElementById('cfg-print-width').value = s.printWidth;
+            document.getElementById('cfg-print-font').value = s.printFont;
+            document.getElementById('cfg-pix-key').value = s.pixKey || '';
+            document.getElementById('cfg-pay-methods').value = s.payMethods;
+            document.getElementById('cfg-header').value = s.headerText;
+            document.getElementById('cfg-footer').value = s.footerText;
+            
             document.getElementById('config-modal').style.display = 'flex'; 
         }
 
         function saveConfig() {
-            config = {
+            // 1. Salvar Auth no LocalStorage
+            auth = {
                 user: document.getElementById('gh-user').value.trim(),
                 repo: document.getElementById('gh-repo').value.trim(),
-                token: document.getElementById('gh-token').value.trim(),
+                token: document.getElementById('gh-token').value.trim()
+            };
+            localStorage.setItem('nbv_auth', JSON.stringify(auth));
+            
+            // 2. Salvar Configurações no Objeto DB (para ir pra nuvem)
+            db.settings = {
                 printWidth: document.getElementById('cfg-print-width').value.trim() || '48mm',
                 printFont: document.getElementById('cfg-print-font').value.trim() || '11px',
                 pixKey: document.getElementById('cfg-pix-key').value.trim(),
@@ -318,13 +356,16 @@
                 headerText: document.getElementById('cfg-header').value,
                 footerText: document.getElementById('cfg-footer').value
             };
-            applyStyles();
-            localStorage.setItem('nbv_config_v5', JSON.stringify(config));
+            
+            applySettings();
             document.getElementById('config-modal').style.display = 'none';
-            loadData();
+            
+            // 3. Sincronizar tudo com a nuvem
+            saveData();
+            loadData(); // Recarrega para garantir
         }
 
-        // --- LOGIC ---
+        // --- FUNÇÕES DE NEGÓCIO ---
         function addProduct() {
             const name = document.getElementById('p-name').value;
             const price = parseFloat(document.getElementById('p-price').value);
@@ -382,7 +423,6 @@
 
         function del(type, id) { if(confirm('Apagar?')) { db[type] = db[type].filter(x => x.id !== id); saveData(); renderAll(); } }
 
-        // --- CART ---
         function addToCart(p) {
             const ex = cart.find(x => x.id === p.id);
             if(ex) updateQty(cart.indexOf(ex), ex.qty + 1);
@@ -428,7 +468,7 @@
             document.getElementById('gallery-link').value = '';
             document.getElementById('pix-display').style.display = 'none';
             calcTotal();
-            addPaymentRow(); // Auto-add first row
+            addPaymentRow(); 
         }
         function closeCheckout() { document.getElementById('checkout-modal').style.display = 'none'; }
         
@@ -449,14 +489,13 @@
         }
 
         function addPaymentRow() {
-            // Calc remaining
             let currentPaid = 0;
             document.querySelectorAll('.pay-amount').forEach(el => currentPaid += parseFloat(el.value)||0);
             const remaining = Math.max(0, finalTotal - currentPaid);
 
             const div = document.createElement('div');
             div.className = 'payment-row';
-            const opts = config.payMethods.split(',').map(m => `<option>${m.trim()}</option>`).join('');
+            const opts = db.settings.payMethods.split(',').map(m => `<option>${m.trim()}</option>`).join('');
             
             div.innerHTML = `
                 <select class="pay-method" onchange="checkPixRow(this)">${opts}</select>
@@ -478,13 +517,13 @@
         }
 
         function updatePixDisplay() {
-            // Show Screen QR for first Pix row
             const pixRow = Array.from(document.querySelectorAll('.payment-row')).find(r => r.querySelector('.pay-method').value.toLowerCase().includes('pix'));
             const display = document.getElementById('pix-display');
+            const key = db.settings.pixKey;
             
-            if(pixRow && config.pixKey) {
+            if(pixRow && key) {
                 const amt = pixRow.querySelector('.pay-amount').value;
-                const payload = createPixPayload(config.pixKey, "Studio NBV", "Boa Ventura", amt, "P"+Date.now());
+                const payload = createPixPayload(key, "Studio NBV", "Boa Ventura", amt, "P"+Date.now());
                 display.style.display = 'block';
                 display.setAttribute('data-code', payload);
                 const qrDiv = document.getElementById('pix-qrcode-checkout');
@@ -497,23 +536,22 @@
         
         function copyPix() { navigator.clipboard.writeText(document.getElementById('pix-display').getAttribute('data-code')); alert('Copiado!'); }
 
-        // --- FINISH ---
         function finishOrder() {
             const payRows = document.querySelectorAll('.payment-row');
             let payments = [];
-            let pixPrintData = null; // Store payload if needing to print
+            let pixPrintData = null;
 
             payRows.forEach(r => {
                 const method = r.querySelector('.pay-method').value;
                 const val = parseFloat(r.querySelector('.pay-amount').value) || 0;
                 const printQr = r.querySelector('.pix-print').checked;
+                const key = db.settings.pixKey;
                 
                 if(val > 0) {
                     payments.push({ method, val });
-                    // If marked to print, generate payload
-                    if(method.toLowerCase().includes('pix') && printQr && config.pixKey) {
+                    if(method.toLowerCase().includes('pix') && printQr && key) {
                         pixPrintData = {
-                            payload: createPixPayload(config.pixKey, "Studio NBV", "Boa Ventura", val, "P"+Date.now()),
+                            payload: createPixPayload(key, "Studio NBV", "Boa Ventura", val, "P"+Date.now()),
                             val: val
                         };
                     }
@@ -532,9 +570,9 @@
                 total: finalTotal,
                 payments: payments,
                 link: document.getElementById('gallery-link').value,
-                pixPrint: pixPrintData, // Save QR data for history reprint
-                header: config.headerText,
-                footer: config.footerText
+                pixPrint: pixPrintData,
+                header: db.settings.headerText,
+                footer: db.settings.footerText
             };
 
             db.sales.push(sale);
@@ -544,35 +582,24 @@
         }
 
         function printReceipt(sale) {
-            // Texts
-            document.getElementById('rec-header').innerText = sale.header || config.headerText;
-            document.getElementById('rec-footer').innerText = sale.footer || config.footerText;
-            
-            // Meta
+            document.getElementById('rec-header').innerText = sale.header;
+            document.getElementById('rec-footer').innerText = sale.footer;
             document.getElementById('rec-meta').innerHTML = `Data: ${sale.date}<br>Cliente: ${sale.client}`;
             document.getElementById('rec-addr').innerText = sale.addr ? `End: ${sale.addr}` : '';
-            
-            // Items
             document.getElementById('rec-items').innerHTML = sale.items.map(i => `<tr><td>${i.qty}x ${i.name}</td><td align="right">R$ ${(i.qty*i.price).toFixed(2)}</td></tr>`).join('');
-            
-            // Totals
             document.getElementById('rec-sub').innerText = sale.subtotal.toFixed(2);
             document.getElementById('rec-disc').innerText = sale.discount.toFixed(2);
             document.getElementById('rec-total-val').innerText = sale.total.toFixed(2);
             document.getElementById('rec-payments').innerHTML = sale.payments.map(p => `<div>${p.method}: R$ ${p.val.toFixed(2)}</div>`).join('');
             
-            // Pix QR Printed
             const recPix = document.getElementById('rec-pix-area');
             if(sale.pixPrint) {
                 recPix.style.display = 'block';
                 document.getElementById('rec-qrcode-pix').innerHTML = '';
                 new QRCode(document.getElementById('rec-qrcode-pix'), { text: sale.pixPrint.payload, width: 90, height: 90 });
                 document.getElementById('rec-pix-val').innerText = `Valor: R$ ${sale.pixPrint.val.toFixed(2)}`;
-            } else {
-                recPix.style.display = 'none';
-            }
+            } else { recPix.style.display = 'none'; }
 
-            // Gallery QR
             const qrC = document.getElementById('qrcode'); qrC.innerHTML = '';
             if(sale.link) {
                 document.getElementById('qr-area').style.display = 'block';
@@ -589,13 +616,11 @@
             ).join('');
         }
 
-        // PIX Payload Generator
         function createPixPayload(key, name, city, amount, txid) {
             function f(id, v) { return id + v.length.toString().padStart(2,'0') + v; }
             let p = "00020126" + (14+key.length+4) + "0014BR.GOV.BCB.PIX01" + (key.length).toString().padStart(2,'0') + key + "520400005303986";
             if(amount > 0) p += f("54", parseFloat(amount).toFixed(2));
             p += "5802BR" + f("59",name.substring(0,25)) + f("60",city.substring(0,15)) + f("62",txid) + "6304";
-            
             let crc = 0xFFFF;
             for(let i=0; i<p.length; i++) {
                 crc ^= p.charCodeAt(i) << 8;
@@ -604,7 +629,7 @@
             return p + (crc & 0xFFFF).toString(16).toUpperCase().padStart(4,'0');
         }
 
-        if(config.token) loadData(); else openConfig();
+        if(auth.token) loadData(); else openConfig();
     </script>
 </body>
 </html>
