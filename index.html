@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Studio NBV - PDV 13.0 (Full Suite)</title>
+    <title>Studio NBV - PDV 14.0 (Supremacia)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         :root { 
@@ -56,11 +56,9 @@
         .client-item, .history-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #eee; background: white; margin-bottom: 5px; }
         .history-item { border-left: 5px solid var(--accent); box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
 
-        /* Estilo Lista Orçamento */
-        .budget-row { display: flex; align-items: center; padding: 5px; border-bottom: 1px solid #eee; }
-        .budget-row:hover { background: #f9f9f9; }
-        .budget-row input[type="checkbox"] { width: auto; margin-right: 10px; transform: scale(1.2); }
-        .budget-row input[type="number"] { width: 70px; padding: 5px; margin-left: auto; text-align: center; }
+        /* LISTA PRODUTOS ORÇAMENTO */
+        .bud-item { display: flex; justify-content: space-between; align-items: center; padding: 8px; border-bottom: 1px solid #eee; background: #fff; }
+        .bud-item input { width: 60px; text-align: center; padding: 5px; }
 
         /* IMPRESSÃO */
         @media print {
@@ -111,20 +109,23 @@
         </div>
 
         <div id="products" class="panel">
-            <h2>Produtos</h2>
-            <div class="form-group"><label>Nome</label><input id="p-name"></div>
-            <div class="form-group"><label>Código</label><input id="p-code"></div>
-            <div class="row-inputs"><div class="form-group" style="flex:1"><label>Preço</label><input id="p-price" type="number" step="0.01"></div></div>
-            <div style="background:#eef2f5; padding:10px; border-radius:5px; margin-bottom:15px; border-left:3px solid var(--accent);">
-                <h4>Atacado (Opcional)</h4>
-                <div class="row-inputs">
-                    <div class="form-group" style="flex:1"><label>Acima de:</label><input id="p-bulk-min" type="number"></div>
-                    <div class="form-group" style="flex:1"><label>Novo Preço:</label><input id="p-bulk-price" type="number" step="0.01"></div>
+            <h2>Gerenciar Produtos</h2>
+            <div style="background:white; padding:15px; border-radius:8px; margin-bottom:20px">
+                <div class="form-group"><label>Nome</label><input id="p-name"></div>
+                <div class="form-group"><label>Código</label><input id="p-code"></div>
+                <div class="row-inputs"><div class="form-group" style="flex:1"><label>Preço</label><input id="p-price" type="number" step="0.01"></div></div>
+                <div style="background:#eef2f5; padding:10px; border-radius:5px; margin-bottom:15px; border-left:3px solid var(--accent);">
+                    <h4>Atacado (Opcional)</h4>
+                    <div class="row-inputs">
+                        <div class="form-group" style="flex:1"><label>Acima de:</label><input id="p-bulk-min" type="number"></div>
+                        <div class="form-group" style="flex:1"><label>Novo Preço:</label><input id="p-bulk-price" type="number" step="0.01"></div>
+                    </div>
                 </div>
-            </div>
-            <div class="row-inputs">
-                <button class="btn" style="flex:1" onclick="addProduct()">Salvar Produto</button>
-                <button class="btn" style="flex:1; background: var(--accent)" onclick="openImportModal()">⚡ Importar em Lote</button>
+                <div class="row-inputs">
+                    <button id="btn-save-prod" class="btn" style="flex:1" onclick="addProduct()">Salvar Produto</button>
+                    <button id="btn-cancel-prod" class="btn" style="flex:1; background:#95a5a6; display:none" onclick="cancelProductEdit()">Cancelar</button>
+                    <button class="btn" style="flex:1; background:var(--accent)" onclick="openImportModal()">⚡ Importar Lote</button>
+                </div>
             </div>
             <hr><div id="p-list"></div>
         </div>
@@ -144,12 +145,13 @@
         </div>
 
         <div id="budget" class="panel">
-            <h2>Gerador de Orçamento (WhatsApp)</h2>
-            <p style="color:#666; font-size:12px">Selecione os itens para gerar o texto do orçamento.</p>
+            <h2>Gerador de Orçamento</h2>
             
-            <div style="background: white; padding: 10px; border-radius: 8px; max-height: 400px; overflow-y: auto; border: 1px solid #ddd;">
-                <div id="budget-product-list"></div>
-            </div>
+            <input type="text" id="bud-search" class="search-bar" placeholder="Buscar produto para adicionar..." onkeyup="filterBudgetProducts()">
+            <div id="bud-grid" class="grid" style="max-height: 200px; overflow-y: auto; margin-bottom: 20px; border-bottom: 2px solid #ddd; padding-bottom: 10px;"></div>
+
+            <h3>Itens do Orçamento</h3>
+            <div id="budget-items-list" style="background: white; border: 1px solid #ddd; min-height: 100px; max-height: 300px; overflow-y: auto; border-radius: 8px;"></div>
 
             <div style="margin-top: 15px; background: #eef2f5; padding: 10px; border-radius: 8px;">
                 <h4>Adicionais</h4>
@@ -180,8 +182,7 @@
     <div id="import-modal" class="modal">
         <div class="modal-content">
             <h3>⚡ Importar Produtos em Lote</h3>
-            <p style="font-size:12px">Cole abaixo no formato: <b>CÓDIGO, NOME, PREÇO, QTD_ATACADO, PREÇO_ATACADO</b><br>
-            Exemplo: <i>1015, Foto 10x15, 5.00, 10, 3.50</i></p>
+            <p style="font-size:12px">Cole abaixo no formato: <b>CÓDIGO, NOME, PREÇO, QTD_ATACADO, PREÇO_ATACADO</b><br>Exemplo: <i>1015, Foto 10x15, 5.00, 10, 3.50</i></p>
             <textarea id="import-text" rows="10" style="width:100%; padding:10px; border:1px solid #ccc"></textarea>
             <div class="row-inputs" style="margin-top:10px;">
                 <button class="btn" style="background:#ccc" onclick="document.getElementById('import-modal').style.display='none'">Cancelar</button>
@@ -276,14 +277,12 @@
         <div class="rec-total">TOTAL: R$ <span id="rec-total-val"></span></div>
         <div id="rec-payments" style="text-align:right; font-size:10px;"></div>
         <div id="rec-change" style="text-align:right; font-size:12px; font-weight:bold; margin-top:5px; display:none;"></div>
-        
         <div id="rec-pix-area" style="display:none; margin-top:10px; border:2px solid #000; padding:5px; text-align:center;">
             <div style="font-size:14px; font-weight:bold; border-bottom:1px solid #000; margin-bottom:5px;">DADOS PIX</div>
             <div style="font-size:10px;">Chave:</div>
             <div style="font-size:16px; font-weight:bold; margin: 5px 0;" id="rec-pix-key"></div>
             <div style="font-size:12px;" id="rec-pix-amount"></div>
         </div>
-
         <div id="qr-area" style="text-align:center; margin-top:10px; display:none;">
             <span>Acesse suas fotos:</span><div id="qrcode"></div>
         </div>
@@ -294,9 +293,11 @@
         // --- CORE ---
         let db = { products: [], clients: [], sales: [], settings: { printWidth: '48mm', printFont: '12px', pixKey: '', payMethods: 'Pix,Dinheiro,Cartão', headerText: 'STUDIO NBV', footerText: 'Obrigado!' } };
         let cart = [];
+        let budgetCart = []; // Carrinho específico para orçamentos
         let auth = JSON.parse(localStorage.getItem('nbv_auth')) || { user: '', repo: '', token: '' };
         let fileSha = '';
         let editingClientId = null;
+        let editingProductId = null;
 
         function applySettings() {
             const s = db.settings;
@@ -350,7 +351,7 @@
             if(t) t.style.display = (id === 'pdv') ? 'flex' : 'block';
             document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
             if(id === 'history') renderHistory();
-            if(id === 'budget') renderBudgetPage();
+            if(id === 'budget') { budgetCart = []; renderBudgetCart(); filterBudgetProducts(); }
         }
 
         function openConfig() { 
@@ -400,14 +401,56 @@
         function addProduct() {
             const name = document.getElementById('p-name').value;
             const price = parseFloat(document.getElementById('p-price').value);
-            if(name && price) {
+            if(!name || !price) return alert('Preencha nome e preço');
+
+            if(editingProductId) {
+                const prod = db.products.find(p => p.id === editingProductId);
+                if(prod) {
+                    prod.name = name;
+                    prod.code = document.getElementById('p-code').value;
+                    prod.price = price;
+                    prod.bulkMin = parseInt(document.getElementById('p-bulk-min').value)||0;
+                    prod.bulkPrice = parseFloat(document.getElementById('p-bulk-price').value)||0;
+                }
+                cancelProductEdit();
+            } else {
                 db.products.push({
                     id: Date.now(), name, code: document.getElementById('p-code').value, price,
                     bulkMin: parseInt(document.getElementById('p-bulk-min').value)||0,
                     bulkPrice: parseFloat(document.getElementById('p-bulk-price').value)||0
                 });
-                saveData(); renderAll(); document.getElementById('p-name').value = '';
             }
+            saveData(); renderAll();
+            document.getElementById('p-name').value = '';
+            document.getElementById('p-code').value = '';
+            document.getElementById('p-price').value = '';
+            document.getElementById('p-bulk-min').value = '';
+            document.getElementById('p-bulk-price').value = '';
+        }
+
+        function startProductEdit(id) {
+            const p = db.products.find(x => x.id === id); if(!p) return;
+            document.getElementById('p-name').value = p.name;
+            document.getElementById('p-code').value = p.code || '';
+            document.getElementById('p-price').value = p.price;
+            document.getElementById('p-bulk-min').value = p.bulkMin || '';
+            document.getElementById('p-bulk-price').value = p.bulkPrice || '';
+            
+            editingProductId = id;
+            document.getElementById('btn-save-prod').innerText = "Atualizar Produto";
+            document.getElementById('btn-cancel-prod').style.display = "block";
+            document.getElementById('products').scrollTop = 0;
+        }
+
+        function cancelProductEdit() {
+            editingProductId = null;
+            document.getElementById('p-name').value = '';
+            document.getElementById('p-code').value = '';
+            document.getElementById('p-price').value = '';
+            document.getElementById('p-bulk-min').value = '';
+            document.getElementById('p-bulk-price').value = '';
+            document.getElementById('btn-save-prod').innerText = "Salvar Produto";
+            document.getElementById('btn-cancel-prod').style.display = "none";
         }
 
         // --- IMPORTAÇÃO EM LOTE ---
@@ -417,97 +460,107 @@
             const text = document.getElementById('import-text').value;
             const lines = text.split('\n');
             let count = 0;
-            
             lines.forEach(line => {
                 const parts = line.split(',').map(s => s.trim());
                 if(parts.length >= 2) {
-                    const code = parts[0];
-                    const name = parts[1];
-                    const price = parseFloat(parts[2]);
+                    const code = parts[0]; const name = parts[1]; const price = parseFloat(parts[2]);
                     if(name && !isNaN(price)) {
                         db.products.push({
-                            id: Date.now() + Math.random(), // Evita ID duplicado rapido
-                            code: code,
-                            name: name,
-                            price: price,
-                            bulkMin: parseInt(parts[3]) || 0,
-                            bulkPrice: parseFloat(parts[4]) || 0
+                            id: Date.now() + Math.random(),
+                            code: code, name: name, price: price,
+                            bulkMin: parseInt(parts[3]) || 0, bulkPrice: parseFloat(parts[4]) || 0
                         });
                         count++;
                     }
                 }
             });
+            if(count > 0) { saveData(); renderAll(); alert(count + ' importados!'); document.getElementById('import-modal').style.display = 'none'; }
+        }
+
+        // --- ORÇAMENTO DINÂMICO ---
+        function filterBudgetProducts() {
+            const term = document.getElementById('bud-search').value.toLowerCase();
+            const grid = document.getElementById('bud-grid');
+            grid.innerHTML = '';
             
-            if(count > 0) {
-                saveData(); renderAll();
-                alert(count + ' produtos importados!');
-                document.getElementById('import-modal').style.display = 'none';
-                document.getElementById('import-text').value = '';
-            } else {
-                alert('Nenhum produto válido encontrado. Use o formato: Codigo, Nome, Preço');
+            if(term.length === 0) return;
+
+            db.products.forEach(p => {
+                if(p.name.toLowerCase().includes(term) || (p.code && p.code.includes(term))) {
+                    const d = document.createElement('div');
+                    d.className = 'card';
+                    d.style.padding = '5px';
+                    d.style.fontSize = '12px';
+                    d.innerHTML = `<b>${p.name}</b><br>R$ ${p.price.toFixed(2)}`;
+                    d.onclick = () => addToBudget(p);
+                    grid.appendChild(d);
+                }
+            });
+        }
+
+        function addToBudget(p) {
+            const exist = budgetCart.find(x => x.id === p.id);
+            if(exist) exist.qty++;
+            else budgetCart.push({...p, qty: 1});
+            
+            document.getElementById('bud-search').value = '';
+            document.getElementById('bud-grid').innerHTML = '';
+            renderBudgetCart();
+        }
+
+        function updateBudgetQty(id, val) {
+            const item = budgetCart.find(x => x.id === id);
+            if(item) {
+                item.qty = parseInt(val);
+                if(item.qty <= 0) removeFromBudget(id);
+                else renderBudgetCart();
             }
         }
 
-        // --- ORÇAMENTOS (NOVA LÓGICA) ---
-        function renderBudgetPage() {
-            const container = document.getElementById('budget-product-list');
-            container.innerHTML = '';
-            db.products.forEach(p => {
-                container.innerHTML += `
-                    <div class="budget-row">
-                        <input type="checkbox" class="bud-check" data-id="${p.id}">
-                        <div style="flex:1"><b>${p.name}</b> (R$ ${p.price.toFixed(2)}) ${p.bulkMin>0 ? '<small style="color:var(--accent)">Atacado >'+p.bulkMin+'</small>' : ''}</div>
-                        <input type="number" class="bud-qty" min="1" placeholder="Qtd" disabled onchange="updateBudgetRow(this)">
+        function removeFromBudget(id) {
+            budgetCart = budgetCart.filter(x => x.id !== id);
+            renderBudgetCart();
+        }
+
+        function renderBudgetCart() {
+            const list = document.getElementById('budget-items-list');
+            list.innerHTML = '';
+            if(budgetCart.length === 0) { list.innerHTML = '<div style="padding:10px;text-align:center;color:#999">Nenhum item</div>'; return; }
+
+            budgetCart.forEach(i => {
+                let price = i.price;
+                let note = '';
+                if(i.bulkMin > 0 && i.qty >= i.bulkMin) { price = i.bulkPrice; note = ' (Atacado)'; }
+                
+                list.innerHTML += `
+                    <div class="bud-item">
+                        <div style="flex:2"><b>${i.name}</b>${note}</div>
+                        <div style="flex:1; text-align:right">R$ ${(price*i.qty).toFixed(2)}</div>
+                        <input type="number" value="${i.qty}" onchange="updateBudgetQty(${i.id}, this.value)">
+                        <button onclick="removeFromBudget(${i.id})" style="color:red;border:none;background:none;margin-left:5px">x</button>
                     </div>
                 `;
-            });
-            
-            // Event Listeners para habilitar input
-            document.querySelectorAll('.bud-check').forEach(chk => {
-                chk.addEventListener('change', (e) => {
-                    const row = e.target.parentElement;
-                    const input = row.querySelector('.bud-qty');
-                    input.disabled = !e.target.checked;
-                    if(!e.target.checked) input.value = '';
-                    else input.focus();
-                });
             });
         }
 
         function generateBudget() {
             let text = `*ORÇAMENTO - STUDIO NBV*\n----------------------------\n`;
             let total = 0;
-            let hasItems = false;
 
-            document.querySelectorAll('.budget-row').forEach(row => {
-                const check = row.querySelector('.bud-check');
-                const input = row.querySelector('.bud-qty');
-                
-                if(check.checked && input.value > 0) {
-                    hasItems = true;
-                    const p = db.products.find(x => x.id == check.dataset.id);
-                    const qty = parseInt(input.value);
-                    
-                    let price = p.price;
-                    let note = "";
-                    if(p.bulkMin > 0 && qty >= p.bulkMin) {
-                        price = p.bulkPrice;
-                        note = " (Promo Atacado)";
-                    }
-                    
-                    const sub = qty * price;
-                    total += sub;
-                    text += `▪ ${qty}x *${p.name}*\n   R$ ${price.toFixed(2)} un. = R$ ${sub.toFixed(2)}${note}\n`;
-                }
+            if(budgetCart.length === 0 && parseFloat(document.getElementById('bud-files').value) === 0) return alert('Adicione itens!');
+
+            budgetCart.forEach(i => {
+                let price = i.price;
+                if(i.bulkMin > 0 && i.qty >= i.bulkMin) price = i.bulkPrice;
+                const sub = i.qty * price;
+                total += sub;
+                text += `▪ ${i.qty}x *${i.name}*\n   R$ ${price.toFixed(2)} un. = R$ ${sub.toFixed(2)}\n`;
             });
 
             const entry = parseFloat(document.getElementById('bud-entry').value) || 0;
             const files = parseFloat(document.getElementById('bud-files').value) || 0;
 
-            if(files > 0) {
-                text += `▪ Arquivos Digitais: R$ ${files.toFixed(2)}\n`;
-                total += files;
-            }
+            if(files > 0) { text += `▪ Arquivos Digitais: R$ ${files.toFixed(2)}\n`; total += files; }
 
             text += `----------------------------\n*TOTAL: R$ ${total.toFixed(2)}*\n`;
 
@@ -517,11 +570,8 @@
             }
 
             text += `\n_Deseja confirmar o pedido?_`;
-
-            if(!hasItems && files === 0) return alert('Selecione algum item!');
-
             navigator.clipboard.writeText(text);
-            alert('Orçamento copiado para a área de transferência!');
+            alert('Copiado!');
         }
 
         // --- CLIENTES ---
@@ -579,7 +629,15 @@
                     grid.appendChild(d);
                 }
             });
-            document.getElementById('p-list').innerHTML = db.products.map(p => `<div>${p.name} <button onclick="del('products',${p.id})">x</button></div>`).join('');
+            document.getElementById('p-list').innerHTML = db.products.map(p => `
+                <div style="display:flex; justify-content:space-between; padding:5px; border-bottom:1px solid #eee;">
+                    <span>${p.name} (${p.code}) - R$ ${p.price.toFixed(2)}</span>
+                    <div>
+                        <button onclick="startProductEdit(${p.id})">✎</button>
+                        <button onclick="del('products',${p.id})" style="color:red">🗑️</button>
+                    </div>
+                </div>
+            `).join('');
             
             const clList = document.getElementById('c-list');
             clList.innerHTML = db.clients.map(c => `
