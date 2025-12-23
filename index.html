@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Studio NBV - PDV 18.0 (Final)</title>
+    <title>Studio NBV - PDV 19.0 (Warrior Edition)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         :root { 
@@ -24,7 +24,7 @@
 
         .pdv-container { display: flex; width: 100%; height: 100%; }
         .product-area { flex: 2; padding: 20px; overflow-y: auto; border-right: 1px solid #ddd; }
-        .cart-area { flex: 1; background: white; display: flex; flex-direction: column; box-shadow: -2px 0 5px rgba(0,0,0,0.05); }
+        .cart-area { flex: 1.3; background: white; display: flex; flex-direction: column; box-shadow: -2px 0 5px rgba(0,0,0,0.05); }
 
         .search-bar { width: 100%; padding: 15px; font-size: 16px; border: 2px solid #ddd; border-radius: 8px; margin-bottom: 20px; box-sizing: border-box; }
         .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 15px; }
@@ -34,7 +34,7 @@
         
         .cart-header { padding: 20px; background: var(--primary); color: white; text-align: center; }
         .cart-list { flex: 1; overflow-y: auto; padding: 10px; }
-        .cart-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #eee; font-size: 14px; }
+        .cart-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #eee; font-size: 13px; gap: 5px; }
         .cart-footer { padding: 20px; background: #f8f9fa; border-top: 1px solid #ddd; }
         .btn-checkout { width: 100%; padding: 15px; background: var(--success); color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; }
 
@@ -45,8 +45,8 @@
         .row-inputs { display: flex; gap: 10px; }
         .btn { padding: 10px 20px; background: var(--primary); color: white; border: none; border-radius: 5px; cursor: pointer; }
         
-        .modal { display: none; position: fixed; top: 0; left: 10%; width: 80%; height: 100%; background: rgba(0,0,0,0.6); justify-content: center; align-items: center; z-index: 1000; }
-        .modal-content { background: white; padding: 25px; border-radius: 8px; width: 500px; max-width: 95%; max-height: 90vh; overflow-y: auto; margin: 5% auto; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); justify-content: center; align-items: center; z-index: 1000; }
+        .modal-content { background: white; padding: 25px; border-radius: 8px; width: 500px; max-width: 95%; max-height: 90vh; overflow-y: auto; position: relative; }
         
         .payment-row { display: flex; gap: 5px; margin-bottom: 5px; align-items: center; }
         .payment-row select { flex: 2; }
@@ -58,6 +58,10 @@
 
         .bud-item { display: flex; justify-content: space-between; align-items: center; padding: 8px; border-bottom: 1px solid #eee; background: #fff; }
         .bud-item input { width: 60px; text-align: center; padding: 5px; }
+
+        /* Estilo Input Carrinho */
+        .input-qty { width: 35px; text-align: center; padding: 5px; border: 1px solid #ddd; border-radius: 4px; }
+        .input-price { width: 60px; text-align: right; padding: 5px; border: 1px solid #ddd; border-radius: 4px; color: var(--accent); font-weight: bold; }
 
         /* IMPRESSÃO */
         @media print {
@@ -99,6 +103,12 @@
             </div>
             <div class="cart-area">
                 <div class="cart-header"><h2>Caixa NBV</h2></div>
+                <div style="padding: 5px 10px; background: #eee; font-size: 10px; display: flex; font-weight: bold;">
+                    <span style="flex:2">PRODUTO</span>
+                    <span style="width: 40px; text-align:center;">QTD</span>
+                    <span style="width: 65px; text-align:center;">UNIT</span>
+                    <span style="flex:1; text-align:right;">TOTAL</span>
+                </div>
                 <div id="cart-list" class="cart-list"></div>
                 <div class="cart-footer">
                     <h2 style="text-align:right; margin:0 0 10px 0">R$ <span id="total">0.00</span></h2>
@@ -160,7 +170,7 @@
         </div>
 
         <div id="history" class="panel">
-            <h2>Histórico</h2>
+            <h2>Histórico de Vendas</h2>
             <button class="btn" onclick="loadData()">🔄 Atualizar</button>
             <hr><div id="h-list"></div>
         </div>
@@ -200,6 +210,20 @@
                 <div class="form-group"><label>Meios (,):</label><input id="cfg-pay-methods"></div>
             </details>
             <button class="btn" style="width:100%" onclick="saveConfig()">Salvar Tudo</button>
+        </div>
+    </div>
+
+    <div id="edit-sale-modal" class="modal">
+        <div class="modal-content">
+            <h3>✏️ Editar Dados da Venda</h3>
+            <input type="hidden" id="edit-sale-id">
+            <div class="form-group"><label>Nome do Cliente:</label><input id="edit-sale-client"></div>
+            <div class="form-group"><label>WhatsApp:</label><input id="edit-sale-phone"></div>
+            <div class="form-group"><label>Endereço:</label><input id="edit-sale-addr"></div>
+            <div class="row-inputs">
+                <button class="btn" style="background:#ccc" onclick="document.getElementById('edit-sale-modal').style.display='none'">Cancelar</button>
+                <button class="btn" onclick="saveSaleEdit()">Salvar Alterações</button>
+            </div>
         </div>
     </div>
 
@@ -305,7 +329,7 @@
                 db.products = remoteDb.products || []; db.clients = remoteDb.clients || []; db.sales = remoteDb.sales || [];
                 if(remoteDb.settings) db.settings = remoteDb.settings;
                 db.products = db.products.map(p => ({...p, bulkMin: p.bulkMin||0, bulkPrice: p.bulkPrice||0 }));
-                applySettings(); renderAll();
+                applySettings(); renderAll(); renderHistory();
             }
         }
 
@@ -342,7 +366,12 @@
             if (e.key === 'F2') { e.preventDefault(); nav('pdv'); document.getElementById('search').focus(); }
             if (e.key === 'F4') { e.preventDefault(); openCheckout(); }
             if (e.key === 'F8') { e.preventDefault(); if(document.getElementById('checkout-modal').style.display === 'flex') finishOrder(); }
-            if (e.key === 'Escape') { document.getElementById('checkout-modal').style.display = 'none'; document.getElementById('config-modal').style.display = 'none'; document.getElementById('import-modal').style.display = 'none'; }
+            if (e.key === 'Escape') { 
+                document.getElementById('checkout-modal').style.display = 'none'; 
+                document.getElementById('config-modal').style.display = 'none'; 
+                document.getElementById('import-modal').style.display = 'none'; 
+                document.getElementById('edit-sale-modal').style.display = 'none';
+            }
         });
 
         document.getElementById('search').addEventListener('keydown', function(e) {
@@ -420,8 +449,43 @@
         function del(type, id) { if(confirm('Apagar?')) { db[type] = db[type].filter(x => x.id !== id); saveData(); renderAll(); } }
 
         function addToCart(p, qtyToAdd=1) { const ex = cart.find(x => x.id === p.id); if(ex) updateQty(cart.indexOf(ex), ex.qty + qtyToAdd); else { let ip = p.price; if(p.bulkMin>0 && qtyToAdd>=p.bulkMin) ip=p.bulkPrice; cart.push({...p, qty: qtyToAdd, currentPrice: ip}); renderCart(); } }
-        function updateQty(idx, newQty) { newQty = parseInt(newQty); if(newQty < 1) return; const item = cart[idx]; const original = db.products.find(p => p.id === item.id); item.qty = newQty; if(original && original.bulkMin > 0 && newQty >= original.bulkMin) item.currentPrice = original.bulkPrice; else item.currentPrice = original ? original.price : item.price; renderCart(); }
-        function renderCart() { const list = document.getElementById('cart-list'); list.innerHTML = ''; let total = 0; cart.forEach((i, idx) => { total += i.qty * i.currentPrice; const orig = db.products.find(p => p.id === i.id); const isBulk = orig && orig.bulkMin > 0 && i.qty >= orig.bulkMin; list.innerHTML += `<div class="cart-item"><div style="flex:2"><b>${i.name}</b>${isBulk ? ' <small style="color:orange">*</small>' : ''}</div><div style="flex:1"><input type="number" value="${i.qty}" style="width:40px" onchange="updateQty(${idx},this.value)"></div><div style="flex:1;text-align:right">R$ ${(i.qty*i.currentPrice).toFixed(2)} <span onclick="cart.splice(${idx},1);renderCart()" style="color:red;cursor:pointer">x</span></div></div>`; }); document.getElementById('total').innerText = total.toFixed(2); }
+        
+        function updateQty(idx, newQty) { 
+            newQty = parseInt(newQty); 
+            if(newQty < 1) return; 
+            const item = cart[idx]; 
+            const original = db.products.find(p => p.id === item.id); 
+            item.qty = newQty; 
+            // Recalculate price based on bulk, UNLESS user manually edited the price (advanced check omitted for simplicity, resets to list/bulk price on QTY change)
+            if(original && original.bulkMin > 0 && newQty >= original.bulkMin) item.currentPrice = original.bulkPrice; 
+            else item.currentPrice = original ? original.price : item.price; 
+            renderCart(); 
+        }
+
+        function updatePrice(idx, newPrice) {
+            cart[idx].currentPrice = parseFloat(newPrice);
+            renderCart();
+        }
+
+        function renderCart() { 
+            const list = document.getElementById('cart-list'); list.innerHTML = ''; let total = 0; 
+            cart.forEach((i, idx) => { 
+                total += i.qty * i.currentPrice; 
+                const orig = db.products.find(p => p.id === i.id); 
+                const isBulk = orig && orig.bulkMin > 0 && i.qty >= orig.bulkMin; 
+                list.innerHTML += `
+                    <div class="cart-item">
+                        <div style="flex:2; display:flex; flex-direction:column; justify-content:center;">
+                            ${i.code ? `<span style="font-size:10px; color:#666; font-weight:bold;">${i.code}</span>` : ''}
+                            <span><b>${i.name}</b>${isBulk ? ' <small style="color:orange">*</small>' : ''}</span>
+                        </div>
+                        <input type="number" class="input-qty" value="${i.qty}" onchange="updateQty(${idx},this.value)">
+                        <input type="number" class="input-price" value="${i.currentPrice.toFixed(2)}" step="0.01" onchange="updatePrice(${idx},this.value)">
+                        <div style="flex:1;text-align:right">R$ ${(i.qty*i.currentPrice).toFixed(2)} <span onclick="cart.splice(${idx},1);renderCart()" style="color:red;cursor:pointer;margin-left:5px;">x</span></div>
+                    </div>`; 
+            }); 
+            document.getElementById('total').innerText = total.toFixed(2); 
+        }
 
         let finalTotal = 0;
         function openCheckout() { if(!cart.length) return alert('Carrinho vazio'); document.getElementById('checkout-modal').style.display = 'flex'; renderClientSelect(); document.getElementById('payment-list').innerHTML = ''; document.getElementById('disc-val').value = 0; document.getElementById('gallery-link').value = ''; document.getElementById('pix-display').style.display = 'none'; document.getElementById('change-display').style.display = 'none'; calcTotal(); addPaymentRow(); }
@@ -493,7 +557,43 @@
         }
 
         function deleteSale(id) { if(confirm('Excluir?')) { db.sales = db.sales.filter(s => s.id !== id); saveData(); renderHistory(); } }
-        function renderHistory() { const list = document.getElementById('h-list'); list.innerHTML = [...db.sales].sort((a,b)=>b.id-a.id).map(s => `<div class="history-item"><div><strong>${s.date}</strong> - ${s.client}<br>R$ ${s.total.toFixed(2)}</div><div><button class="btn" onclick='printReceipt(${JSON.stringify(s)})'>🖨️</button><button class="btn" onclick='deleteSale(${s.id})' style="background:red;margin-left:5px;">🗑️</button></div></div>`).join(''); }
+        
+        function openEditSale(id) {
+            const s = db.sales.find(x => x.id === id);
+            if(!s) return;
+            document.getElementById('edit-sale-id').value = id;
+            document.getElementById('edit-sale-client').value = s.client;
+            document.getElementById('edit-sale-phone').value = s.phone || '';
+            document.getElementById('edit-sale-addr').value = s.addr || '';
+            document.getElementById('edit-sale-modal').style.display = 'flex';
+        }
+
+        function saveSaleEdit() {
+            const id = parseInt(document.getElementById('edit-sale-id').value);
+            const s = db.sales.find(x => x.id === id);
+            if(s) {
+                s.client = document.getElementById('edit-sale-client').value;
+                s.phone = document.getElementById('edit-sale-phone').value;
+                s.addr = document.getElementById('edit-sale-addr').value;
+                saveData();
+                renderHistory();
+                document.getElementById('edit-sale-modal').style.display = 'none';
+            }
+        }
+
+        function renderHistory() { 
+            const list = document.getElementById('h-list'); 
+            list.innerHTML = [...db.sales].sort((a,b)=>b.id-a.id).map(s => `
+                <div class="history-item">
+                    <div><strong>${s.date}</strong> - ${s.client}<br>R$ ${s.total.toFixed(2)}</div>
+                    <div>
+                        <button class="btn" onclick='openEditSale(${s.id})' title="Editar Cliente">✏️</button>
+                        <button class="btn" onclick='printReceipt(${JSON.stringify(s)})' title="Imprimir">🖨️</button>
+                        <button class="btn" onclick='deleteSale(${s.id})' style="background:red;margin-left:5px;" title="Excluir">🗑️</button>
+                    </div>
+                </div>`).join(''); 
+        }
+
         function normalizeStr(str) { return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9 ]/g, "").toUpperCase(); }
         function createPixPayload(key, name, city, amount, txid) { const cleanKey = key.trim(); const cleanName = normalizeStr(name).substring(0,25); const cleanCity = normalizeStr(city).substring(0,15); const cleanTxid = normalizeStr(txid).substring(0,25) || "***"; const cleanAmount = parseFloat(amount).toFixed(2); function f(id, v) { return id + v.length.toString().padStart(2,'0') + v; } let p = "00020126" + (14+cleanKey.length+4) + "0014BR.GOV.BCB.PIX01" + (cleanKey.length).toString().padStart(2,'0') + cleanKey; p += "520400005303986"; if(parseFloat(amount)>0) p += f("54", cleanAmount); p += "5802BR" + f("59",cleanName) + f("60",cleanCity) + f("62", f("05",cleanTxid)) + "6304"; let crc = 0xFFFF; for(let i=0; i<p.length; i++) { crc ^= p.charCodeAt(i) << 8; for(let j=0; j<8; j++) crc = (crc & 0x8000) ? (crc << 1) ^ 0x1021 : crc << 1; } return p + (crc & 0xFFFF).toString(16).toUpperCase().padStart(4,'0'); }
 
